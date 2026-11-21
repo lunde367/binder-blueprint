@@ -226,6 +226,39 @@ main{display:flex;flex-direction:column;gap:14px}
 .havebtn{width:100%}
 .havebtn.on{background:var(--have-bg);color:var(--have);border-color:var(--have)}
 .havebtn.off{background:var(--need-bg);color:var(--need);border-color:var(--need)}
+.toast button{margin-left:12px;border:0;background:transparent;color:var(--accent);font:800 15px var(--body);padding:4px 6px;text-decoration:underline}
+#ins-print{display:none}
+.hint{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+/* drag */
+.page .pk{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.pk img{pointer-events:none;-webkit-user-drag:none}
+.pk.pressing{transform:scale(.94);transition:transform .25s ease}
+.pk.lifted{opacity:.2}
+.pk.ghost{position:fixed;z-index:80;pointer-events:none;box-shadow:0 14px 30px rgba(0,0,0,.45);border-radius:6px;opacity:.95}
+.pk.drop-target{outline:3px solid var(--accent);outline-offset:-1px;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+body.dragging,body.dragging *{cursor:grabbing!important}
+.pk.just-dropped{animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(1.15)}100%{transform:scale(1)}}
+/* inserts */
+.btile.tool{grid-template-columns:auto 1fr auto}
+.ticon{width:36px;height:50px;border-radius:5px;background:var(--foil);display:grid;place-items:center;font-size:18px;color:#1b2a30}
+.ins-top{display:flex;gap:8px;flex-wrap:wrap}
+.filebtn{position:relative;overflow:hidden;display:inline-flex;align-items:center;cursor:pointer}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.ins-sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;max-width:520px;width:100%;align-self:center}
+.ins-slot{aspect-ratio:5/7;border:1px dashed #b8c2c9;border-radius:4px;background:#f3f5f6;padding:0;overflow:hidden;display:grid;place-items:center;color:#8a97a0;font-size:28px}
+.ins-slot:not(.empty){border-style:solid;border-color:#d0d7dc}
+.ins-slot canvas{width:100%;height:100%;display:block}
+.ins-edit{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start}
+@media(max-width:600px){.ins-edit{grid-template-columns:1fr}.ins-canvas-wrap{position:sticky;top:-16px;z-index:3;background:var(--bg);padding:6px 0 8px;margin:-6px 0 0}.ins-edit .ins-canvas-wrap canvas{width:min(42vw,170px)}}
+.ins-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ins-canvas-wrap canvas{width:min(100%,240px);aspect-ratio:5/7;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.25);touch-action:none;cursor:grab;background:var(--sunk)}
+.ins-controls{display:flex;flex-direction:column;gap:12px;min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;background:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow:auto}
+.chips button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 10px;border-radius:999px;min-height:34px}
+.chips button i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.chips button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
 
 /* ---------- sleeving guide ---------- */
@@ -256,11 +289,18 @@ main{display:flex;flex-direction:column;gap:14px}
   .detail .dimg{width:110px}
 }
 @media print{
-  @page{size:letter;margin:0.4in}
   :root{--bg:#fff;--surface:#fff;--sunk:#f2f2f2;--fg:#000;--muted:#444;--line:#bbb;--need:#9a3412}
   body{background:#fff;color:#000;font-size:11px}
   .wrap{padding:0;max-width:none;gap:0}
   header,.tabs,.banner,.fab,.no-print,.toast,#modal-root{display:none!important}
+  body.print-ins .wrap{display:none!important}
+  body.print-ins #ins-print{display:block}
+  .ins-page{position:relative;width:8.5in;height:11in;overflow:hidden;page-break-after:avoid;break-after:avoid}
+  .ins-grid{position:absolute;left:0.5in;top:0.25in;width:7.5in;height:10.5in;display:grid;grid-template-columns:repeat(3,2.5in);grid-template-rows:repeat(3,3.5in)}
+  .ins-grid img{width:2.5in;height:3.5in;display:block;outline:0.5px dashed #9aa3ab;outline-offset:-0.25px}
+  .tick{position:absolute;background:#000}
+  .tick.v{width:0.5px;height:0.2in}
+  .tick.h{height:0.5px;width:0.4in}
   .printhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px}
   .printhead h1{font-size:20px;margin:0}
   .printhead div{font-size:11px;color:#333;text-align:right}
@@ -288,6 +328,8 @@ main{display:flex;flex-direction:column;gap:14px}
 </div>
 <button class="fab" id="fab">＋ Add</button>
 <div id="modal-root"></div>
+<div id="ins-print"></div>
+<style id="pagestyle"></style>
 
 <script>
 /* =========================================================
@@ -483,13 +525,14 @@ function pageHTML(b, L, map, s) {
     const row = map[s] || {};
     for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
   }
-  return `<div class="page${over ? ' over' : ''}" style="--cols:${cols}">${inner}<div class="pno">${over ? "doesn't fit · " : ''}p.${s + 1}</div></div>`;
+  return `<div class="page${over ? ' over' : ''}" data-side="${s}" style="--cols:${cols}">${inner}<div class="pno">${over ? "doesn't fit · " : ''}p.${s + 1}</div></div>`;
 }
 
 /* ---------------- views ---------------- */
 const TABS = ['binder', 'contents', 'guide', 'setup'];
+const okTab = t => t === 'home' || t === 'inserts' || (TABS.includes(t) && !!cur());
 let tab = (location.hash || '#home').slice(1);
-if (!TABS.includes(tab) || !cur()) tab = 'home';
+if (!okTab(tab)) tab = 'home';
 /* Navigation uses browser history so the phone's back gesture works:
    back closes an open window first, then goes from a binder to My binders. */
 let closingModal = false, afterPop = null;
@@ -507,7 +550,7 @@ window.addEventListener('popstate', () => {
   if (closingModal) { closingModal = false; const f = afterPop; afterPop = null; if (f) f(); return; }
   if ($('#modal-root').innerHTML) { $('#modal-root').innerHTML = ''; return; }
   const t = location.hash.slice(1) || 'home';
-  tab = (t === 'home' || (TABS.includes(t) && cur())) ? t : 'home';
+  tab = okTab(t) ? t : 'home';
   render(); window.scrollTo(0, 0);
 });
 function toggleOwn(i) {
@@ -524,21 +567,22 @@ function toggleOwn(i) {
 
 function render() {
   const b = cur();
-  if (!b && tab !== 'home') tab = 'home';
-  const home = tab === 'home';
-  $('#tabs').hidden = home;
+  if (!okTab(tab)) tab = 'home';
+  const home = tab === 'home', insv = tab === 'inserts';
+  $('#tabs').hidden = home || insv;
   $('#back').hidden = home;
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
-  $('#title').textContent = home ? 'Binder Blueprint' : b.name;
-  $('#sub').textContent = home ? 'Plan your real binder before you sleeve a single card.' : `${b.pockets}-pocket binder · ${b.pages} pages`;
-  $('#fab').style.display = !home && b.items.length && (tab === 'binder' || tab === 'contents') ? '' : 'none';
+  $('#title').textContent = home ? 'Binder Blueprint' : insv ? 'Title & divider cards' : b.name;
+  $('#sub').textContent = home ? 'Plan your real binder before you sleeve a single card.' : insv ? 'Make your own inserts at real card size.' : `${b.pockets}-pocket binder · ${b.pages} pages`;
+  $('#fab').style.display = !home && !insv && b.items.length && (tab === 'binder' || tab === 'contents') ? '' : 'none';
   document.documentElement.style.setProperty('--zoom', store.zoom);
-  ({ home: renderHome, binder: renderBinder, contents: renderContents, guide: renderGuide, setup: renderSetup })[tab]();
+  ({ home: renderHome, inserts: renderInserts, binder: renderBinder, contents: renderContents, guide: renderGuide, setup: renderSetup })[tab]();
 }
 function renderHome() {
   const steps = `<div class="steps"><div><i>1</i>Pick your binder</div><div><i>2</i>Add your cards</div><div><i>3</i>Print &amp; sleeve</div></div>`;
   if (!store.binders.length) {
     $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="create">＋ Create a binder</button>${steps}</div>
+      <button class="btile tool" data-act="inserts"><span class="ticon">✂︎</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button>
       <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
     return;
   }
@@ -547,7 +591,8 @@ function renderHome() {
       return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span><b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
         <span class="meter${L.used > L.cap ? ' over' : ''}"><i style="width:${Math.min(100, Math.round(L.used / L.cap * 100))}%"></i></span></button>`;
     }).join('')}
-    <button class="btn primary" data-act="create" style="align-self:flex-start">＋ Create a binder</button></div>
+    <button class="btn primary" data-act="create" style="align-self:flex-start">＋ Create a binder</button>
+    <button class="btile tool" data-act="inserts"><span class="ticon">✂︎</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button></div>
     <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
 }
 function openCreate() {
@@ -607,7 +652,7 @@ function renderBinder() {
       <span class="grow"></span>
       <span style="display:flex;gap:6px"><button class="icon-btn" data-zoom="-1" aria-label="Smaller">−</button>
       <button class="icon-btn" data-zoom="1" aria-label="Bigger">＋</button></span>
-    </div><div class="spreads">`;
+    </div><p class="hint">Hold a card, then drag it to move it.</p><div class="spreads">`;
   if (b.spreads) {
     const groups = [[-1, 0]];
     for (let s = 1; s < total; s += 2) groups.push([s, s + 1]);
@@ -735,10 +780,16 @@ function confirmBox(title, msg, okLabel, fn) {
   $('#cOK', m).onclick = () => { closeModal(); fn(); };
 }
 let toastT;
-function toast(msg) {
+function toast(msg, action) {
   document.querySelector('.toast')?.remove();
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
-  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2000);
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  if (action) {
+    const b = document.createElement('button'); b.textContent = action.label;
+    b.onclick = () => { t.remove(); action.fn(); };
+    t.appendChild(b);
+  }
+  document.body.appendChild(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), action ? 5000 : 2000);
 }
 function commit(msg) { save(); render(); if (msg) toast(msg); }
 
@@ -975,7 +1026,8 @@ function openItem(i) {
   else if (it.k === 'title') top = `<h2 style="margin-bottom:10px">Title / divider</h2><p class="muted small">${spot}</p>
       <label class="field"><span>Text</span><input class="inp" id="dText" maxlength="40" value="${esc(it.text)}"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
-      <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>`;
+      <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>
+      <button class="btn sm" id="dIns">✂︎ Make a printable card for this</button>`;
   else if (it.k === 'energy') top = `<h2>${esc(it.type)} Energy</h2><p class="muted small">${spot}</p>`;
   else top = `<h2>Empty pocket</h2><p class="muted small">${spot}. Saved for later.</p>`;
   const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
@@ -988,8 +1040,378 @@ function openItem(i) {
   $('#dPrev', m).onclick = () => { const j = moveItem(i, -1); commit(); openItem(j); };
   $('#dNext', m).onclick = () => { const j = moveItem(i, 1); commit(); openItem(j); };
   $('#dEmpty', m).onclick = () => { b.items.splice(i, 0, { k: 'empty', sec: it.sec }); commit('Empty pocket added'); openItem(i + 1); };
-  $('#dDel', m).onclick = () => { b.items.splice(i, 1); closeModal(); commit('Removed'); };
+  $('#dIns', m) && ($('#dIns', m).onclick = () => titleToInsert(it));
+  $('#dDel', m).onclick = () => { const [gone] = b.items.splice(i, 1); closeModal(); commit(); toast('Removed', { label: 'Undo', fn: () => { b.items.splice(i, 0, gone); commit(); } }); };
 }
+
+/* ---------------- drag to rearrange ----------------
+   Touch: hold a card still for a moment, then drag. Moving early is a normal scroll.
+   Mouse: press and drag a few pixels. Drop on any pocket to put the card there. */
+const DRAG = { el: null, i: -1, id: null, type: '', x0: 0, y0: 0, x: 0, y: 0, timer: 0, active: false, ghost: null, target: null, raf: 0, justDropped: false };
+const HOLD_MS = 260;
+
+function dragReset() {
+  clearTimeout(DRAG.timer);
+  cancelAnimationFrame(DRAG.raf);
+  DRAG.ghost?.remove();
+  DRAG.el?.classList.remove('lifted', 'pressing');
+  $$('.drop-target').forEach(x => x.classList.remove('drop-target'));
+  document.body.classList.remove('dragging');
+  Object.assign(DRAG, { el: null, i: -1, id: null, active: false, ghost: null, target: null });
+}
+function dragLift() {
+  const el = DRAG.el; if (!el) return;
+  DRAG.active = true;
+  el.classList.remove('pressing');
+  const r = el.getBoundingClientRect();
+  const g = el.cloneNode(true);
+  g.className = el.className + ' ghost'; g.removeAttribute('data-i');
+  Object.assign(g.style, { width: r.width + 'px', height: r.height + 'px', left: '0px', top: '0px' });
+  DRAG.dx = DRAG.x - r.left; DRAG.dy = DRAG.y - r.top;
+  document.body.appendChild(g); DRAG.ghost = g;
+  el.classList.add('lifted');
+  document.body.classList.add('dragging');
+  try { navigator.vibrate?.(12); } catch (e) {}
+  dragMoveGhost(); dragLoop();
+}
+function dragMoveGhost() {
+  if (!DRAG.ghost) return;
+  DRAG.ghost.style.transform = `translate(${DRAG.x - DRAG.dx}px, ${DRAG.y - DRAG.dy}px) rotate(-3deg) scale(1.08)`;
+  const under = document.elementFromPoint(DRAG.x, DRAG.y);
+  const t = under && under.closest('.page .pk');
+  if (t !== DRAG.target) {
+    DRAG.target?.classList.remove('drop-target');
+    DRAG.target = t && t !== DRAG.el ? t : null;
+    DRAG.target?.classList.add('drop-target');
+  }
+}
+function dragLoop() {   // scroll the page when the finger is near the top or bottom edge
+  if (!DRAG.active) return;
+  const edge = 80, h = innerHeight;
+  let v = 0;
+  if (DRAG.y < edge) v = -Math.ceil((edge - DRAG.y) / 6);
+  else if (DRAG.y > h - edge) v = Math.ceil((DRAG.y - (h - edge)) / 6);
+  if (v) { window.scrollBy(0, v); dragMoveGhost(); }
+  DRAG.raf = requestAnimationFrame(dragLoop);
+}
+/* Where does the dragged item land? Returns the index to insert at (after removing it). */
+function dropIndex(b, from, target) {
+  const L = layout(b);
+  if (target.dataset.i !== undefined) return { at: +target.dataset.i, sec: b.items[+target.dataset.i].sec, before: true };
+  // A blank pocket: put it right after the last item placed before that pocket.
+  const page = target.closest('.page'), pageIdx = +page.dataset.side, k = [...page.querySelectorAll('.pk')].indexOf(target);
+  const pos = pageIdx * L.P + k;
+  let best = -1, bestPos = -1;
+  b.items.forEach((it, i) => { if (L.at[i] >= 0 && L.at[i] < pos && L.at[i] > bestPos) { bestPos = L.at[i]; best = i; } });
+  return { at: best + 1, sec: best >= 0 ? b.items[best].sec : b.items[0].sec, before: false };
+}
+function dragDrop() {
+  const b = cur(), from = DRAG.i, target = DRAG.target;
+  if (!b || !target || from < 0) return;
+  const snapshot = JSON.stringify({ items: b.items, sections: b.sections });
+  const d = dropIndex(b, from, target);
+  const [it] = b.items.splice(from, 1);
+  let at = d.at;
+  if (!d.before && from < at) at--;          // removing the card shifted everything after it
+  if (at === from && d.before) { b.items.splice(from, 0, it); return; }
+  it.sec = d.sec;
+  b.items.splice(Math.max(0, Math.min(at, b.items.length)), 0, it);
+  save(); render();
+  const moved = b.items.indexOf(it);
+  $(`#main .pk[data-i="${moved}"]`)?.classList.add('just-dropped');
+  toast(it.k === 'card' ? `Moved ${it.name}` : 'Moved', { label: 'Undo', fn: () => { const s = JSON.parse(snapshot); b.items = s.items; b.sections = s.sections; commit('Move undone'); } });
+}
+
+$('#main').addEventListener('pointerdown', e => {
+  if (tab !== 'binder' || e.button > 0 || DRAG.el) return;
+  const el = e.target.closest('.page .pk[data-i]'); if (!el) return;
+  Object.assign(DRAG, { el, i: +el.dataset.i, id: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY });
+  if (e.pointerType !== 'mouse') {
+    el.classList.add('pressing');
+    DRAG.timer = setTimeout(dragLift, HOLD_MS);
+  }
+});
+document.addEventListener('pointermove', e => {
+  if (!DRAG.el || e.pointerId !== DRAG.id) return;
+  DRAG.x = e.clientX; DRAG.y = e.clientY;
+  const moved = Math.hypot(DRAG.x - DRAG.x0, DRAG.y - DRAG.y0);
+  if (!DRAG.active) {
+    if (DRAG.type === 'mouse') { if (moved > 6) dragLift(); }
+    else if (moved > 10) dragReset();          // finger moved before the hold: it's a scroll
+    return;
+  }
+  e.preventDefault();
+  dragMoveGhost();
+});
+document.addEventListener('pointerup', e => {
+  if (!DRAG.el || e.pointerId !== DRAG.id) return;
+  if (DRAG.active) { DRAG.justDropped = true; setTimeout(() => DRAG.justDropped = false, 60); dragDrop(); }
+  dragReset();
+});
+document.addEventListener('pointercancel', e => { if (DRAG.el && e.pointerId === DRAG.id) dragReset(); });
+// While a card is lifted, stop the page from scrolling under the finger.
+document.addEventListener('touchmove', e => { if (DRAG.active) e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => { if (e.target.closest('.page .pk')) e.preventDefault(); });
+
+/* ---------------- insert maker ----------------
+   Title / divider cards at real card size (2.5 × 3.5 in), 9 to a letter sheet.
+   Pictures are the person's own uploads only. Settings live in localStorage,
+   pictures in IndexedDB (they're too big for localStorage). */
+const INS_KEY = 'binderBlueprint.inserts';
+const CARD_W = 750, CARD_H = 1050;               // 300 dpi
+// Border colors we picked for each set (our own choices, no logos).
+const SET_BORDERS = [
+  ['30th Celebration', '#F2C230'], ['Chaos Rising', '#2F6FDB'], ['Delta Reign', '#7A4FD6'], ['Pitch Black', '#23262D'],
+  ['Perfect Order', '#C9CED6'], ['Ascended Heroes', '#E39B2D'], ['Phantasmal Flames', '#E2552B'], ['Mega Evolution', '#2FA4C8'],
+  ['White Flare', '#EDEDED'], ['Black Bolt', '#1B1B1B'], ['Destined Rivals', '#B0233A'], ['Journey Together', '#3BAA6E'],
+  ['Prismatic Evolutions', '#B57BFF'], ['Surging Sparks', '#F4C21B'], ['151', '#E3350D'],
+];
+const BG_COLORS = ['#1B2B33', '#2F6FDB', '#E63946', '#2A9D8F', '#8E5CF7', '#F2B705', '#FF7AB6', '#FFFFFF'];
+const blankSlot = () => ({ id: uid(), hasImg: false, x: 0, y: 0, z: 1, rot: 0, text: '', textPos: 'bottom', bg: '#1B2B33', border: '' });
+let ins = (() => {
+  try { const d = JSON.parse(localStorage.getItem(INS_KEY)); if (d && Array.isArray(d.slots) && d.slots.length === 9) return d; } catch (e) {}
+  return { slots: Array.from({ length: 9 }, blankSlot) };
+})();
+const saveIns = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
+
+/* tiny IndexedDB store for pictures */
+const imgDB = (() => {
+  let dbp = null; const mem = {};
+  const open = () => dbp ??= new Promise(res => {
+    try {
+      const r = indexedDB.open('binderBlueprint', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('insertImages');
+      r.onsuccess = () => res(r.result); r.onerror = () => res(null);
+    } catch (e) { res(null); }
+  });
+  const tx = async (mode, fn) => { const db = await open(); if (!db) return null; return new Promise(res => { const t = db.transaction('insertImages', mode); const q = fn(t.objectStore('insertImages')); t.oncomplete = () => res(q && q.result); t.onerror = () => res(null); }); };
+  return {
+    get: async k => mem[k] ?? (mem[k] = await tx('readonly', s => s.get(k))),
+    set: async (k, v) => { mem[k] = v; await tx('readwrite', s => s.put(v, k)); },
+    del: async k => { delete mem[k]; await tx('readwrite', s => s.delete(k)); },
+  };
+})();
+const imgEls = {};
+async function slotImage(slot) {
+  if (!slot.hasImg) return null;
+  if (imgEls[slot.id]) return imgEls[slot.id];
+  const src = await imgDB.get(slot.id); if (!src) return null;
+  return new Promise(res => { const im = new Image(); im.onload = () => res(imgEls[slot.id] = im); im.onerror = () => res(null); im.src = src; });
+}
+/* Shrink a photo to at most 2000px so it stays light but prints sharp. */
+function readPicture(file) {
+  return new Promise((res, rej) => {
+    if (!/^image\//.test(file.type)) return rej(new Error('not an image'));
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 2000 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.9));
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    im.src = url;
+  });
+}
+async function setSlotPicture(slot, file) {
+  const data = await readPicture(file);
+  await imgDB.set(slot.id, data); delete imgEls[slot.id];
+  Object.assign(slot, { hasImg: true, x: 0, y: 0, z: 1, rot: 0 });
+  saveIns();
+}
+const luminance = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; };
+
+/* Draw one insert onto a canvas of any size. */
+function drawInsert(ctx, slot, W, H, img) {
+  ctx.save();
+  ctx.fillStyle = slot.bg || '#1B2B33'; ctx.fillRect(0, 0, W, H);
+  if (img) {
+    const rot = ((slot.rot % 360) + 360) % 360, side = rot % 180 !== 0;
+    const iw = side ? img.height : img.width, ih = side ? img.width : img.height;
+    const s = Math.max(W / iw, H / ih) * slot.z;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    ctx.translate(W / 2 + slot.x * W, H / 2 + slot.y * H); ctx.rotate(rot * Math.PI / 180);
+    ctx.drawImage(img, -img.width * s / 2, -img.height * s / 2, img.width * s, img.height * s);
+    ctx.restore();
+  }
+  const bw = slot.border ? W * 0.055 : 0;
+  if (slot.border) { ctx.lineWidth = bw; ctx.strokeStyle = slot.border; ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw); }
+  const text = (slot.text || '').trim();
+  if (text) {
+    const maxW = W - bw * 2 - W * 0.12;
+    let size = W * 0.13, lines;
+    const fam = getComputedStyle(document.documentElement).getPropertyValue('--display') || 'sans-serif';
+    for (;;) {   // wrap into at most 3 lines, shrinking until it fits
+      ctx.font = `800 ${size}px ${fam}`;
+      lines = []; let line = '';
+      for (const w of text.split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+      lines.push(line);
+      if ((lines.length <= 3 && lines.every(l => ctx.measureText(l).width <= maxW)) || size < W * 0.05) break;
+      size *= 0.92;
+    }
+    const lh = size * 1.12, blockH = lines.length * lh;
+    const pad = bw + H * 0.05;
+    const top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
+    let color = luminance(slot.bg || '#000') > 0.6 ? '#15232B' : '#FFFFFF';
+    if (img) {
+      ctx.fillStyle = 'rgba(10,16,20,.55)';
+      ctx.fillRect(bw, top - size * 0.35, W - bw * 2, blockH + size * 0.5);
+      color = '#FFFFFF';
+    }
+    ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    lines.forEach((l, k) => ctx.fillText(l, W / 2, top + k * lh));
+  }
+  ctx.restore();
+}
+async function paintSlotCanvas(canvas, slot) {
+  const img = await slotImage(slot);
+  drawInsert(canvas.getContext('2d'), slot, canvas.width, canvas.height, img);
+}
+const slotEmpty = s => !s.hasImg && !(s.text || '').trim();
+
+/* ---------- the sheet ---------- */
+function renderInserts() {
+  const filled = ins.slots.filter(s => !slotEmpty(s)).length;
+  $('#main').innerHTML = `
+    <div class="ins-top">
+      <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
+      <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
+      <button class="btn ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear</button>
+    </div>
+    <div class="ins-sheet">${ins.slots.map((s, k) => `<button class="ins-slot ${slotEmpty(s) ? 'empty' : ''}" data-slot="${k}" aria-label="Card ${k + 1}">
+        ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas>`}</button>`).join('')}</div>
+    <p class="intro">Tap a card to crop its picture, add a title or a set-colored border. Up to 9 cards print on one letter sheet, each exactly 2.5 × 3.5 in, with cut lines. When printing, choose <b>Actual size / 100%</b>.</p>
+    <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
+  $$('.ins-slot canvas').forEach(c => paintSlotCanvas(c, ins.slots[+c.parentNode.dataset.slot]));
+}
+async function addPictures(files) {
+  const list = [...files].filter(f => /^image\//.test(f.type));
+  if (!list.length) return toast('Those files aren’t pictures.');
+  const free = ins.slots.filter(slotEmpty);   // only completely empty cards
+  if (!free.length) return toast('All 9 cards are in use. Clear one first.');
+  const use = list.slice(0, free.length);
+  toast(`Adding ${plural(use.length, 'picture')}…`);
+  for (let k = 0; k < use.length; k++) {
+    try { await setSlotPicture(free[k], use[k]); } catch (e) { toast('One picture could not be read.'); }
+  }
+  render();
+  toast(list.length > use.length ? `Added ${use.length}. Only 9 fit on a sheet.` : `Added ${plural(use.length, 'picture')}. Tap one to crop it.`);
+}
+
+/* ---------- the editor ---------- */
+function openInsertEditor(k) {
+  const slot = ins.slots[k];
+  const m = openModal(`
+    <div class="mhead"><h2>Card ${k + 1}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="ins-edit">
+      <div class="ins-canvas-wrap">
+        <canvas id="ieCanvas" width="500" height="700"></canvas>
+        <p class="small muted" id="ieHint">${slot.hasImg ? 'Drag to move · pinch or use the slider to zoom' : 'Add a picture, or just a title'}</p>
+      </div>
+      <div class="ins-controls">
+        <div class="drow" style="margin:0">
+          <label class="btn sm filebtn">${slot.hasImg ? 'Change picture' : '＋ Picture'}<input type="file" accept="image/*" id="ieFile"></label>
+          ${slot.hasImg ? `<button class="btn sm" id="ieRot">↻ Rotate</button><button class="btn sm" id="ieFit">Center</button><button class="btn sm danger" id="ieNoImg">Remove picture</button>` : ''}
+        </div>
+        ${slot.hasImg ? `<label class="field"><span>Zoom</span><input type="range" id="ieZoom" min="1" max="4" step="0.01" value="${slot.z}"></label>` : ''}
+        <label class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="e.g. Delta Reign"></label>
+        <div class="field"><span>Title position</span><div class="seg" id="iePos">${['top', 'middle', 'bottom'].map(p => `<button data-p="${p}" class="${slot.textPos === p ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div></div>
+        <div class="field"><span>Border</span>
+          <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
+        <div class="field"><span>Background</span><div class="swatches" id="ieBg">${BG_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${slot.bg === c ? 'on' : ''}" aria-label="background ${c}"></button>`).join('')}</div></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn ghost danger" id="ieClear">Clear card</button><button class="btn primary" data-close>Done</button></div>`, true);
+  const cv = $('#ieCanvas', m);
+  const paint = () => { paintSlotCanvas(cv, slot); };
+  const changed = () => { saveIns(); paint(); };
+  paint();
+  $('#ieFile', m).onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { await setSlotPicture(slot, f); openInsertEditor(k); render(); } catch (err) { toast('That file isn’t a picture we can read.'); }
+  };
+  $('#ieText', m).oninput = e => { slot.text = e.target.value; changed(); };
+  $$('#iePos button', m).forEach(b => b.onclick = () => { slot.textPos = b.dataset.p; $$('#iePos button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $$('#ieBorder button', m).forEach(b => b.onclick = () => { slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $$('#ieBg button', m).forEach(b => b.onclick = () => { slot.bg = b.dataset.c; $$('#ieBg button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $('#ieClear', m).onclick = async () => { await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
+  if (!slot.hasImg) return;
+  const zoom = $('#ieZoom', m);
+  $('#ieRot', m).onclick = () => { slot.rot = (slot.rot + 90) % 360; changed(); };
+  $('#ieFit', m).onclick = () => { Object.assign(slot, { x: 0, y: 0, z: 1 }); zoom.value = 1; changed(); };
+  $('#ieNoImg', m).onclick = async () => { await imgDB.del(slot.id); delete imgEls[slot.id]; slot.hasImg = false; saveIns(); openInsertEditor(k); render(); };
+  zoom.oninput = () => { slot.z = +zoom.value; changed(); };
+  // drag to pan, pinch / wheel to zoom
+  const pts = new Map(); let last = null;
+  const clamp = () => { slot.z = Math.max(1, Math.min(4, slot.z)); const lim = 0.5 * slot.z + 0.5; slot.x = Math.max(-lim, Math.min(lim, slot.x)); slot.y = Math.max(-lim, Math.min(lim, slot.y)); zoom.value = slot.z; };
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); last = null; });
+  cv.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    const r = cv.getBoundingClientRect();
+    if (pts.size === 1) { slot.x += (e.clientX - prev[0]) / r.width; slot.y += (e.clientY - prev[1]) / r.height; }
+    else if (pts.size === 2) {
+      const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (last) slot.z *= d / last; last = d;
+    }
+    clamp(); paint();
+  });
+  const up = e => { pts.delete(e.pointerId); last = null; saveIns(); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); slot.z *= e.deltaY < 0 ? 1.06 : 1 / 1.06; clamp(); changed(); }, { passive: false });
+}
+
+/* ---------- printing: 3 × 3 at exact size with cut lines ---------- */
+async function printInserts() {
+  const filled = ins.slots.filter(s => !slotEmpty(s));
+  if (!filled.length) return;
+  if (framed) return toast('Printing works on your own site. This preview can’t open the print window.');
+  const urls = [];
+  for (const s of filled) {
+    const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
+    drawInsert(c.getContext('2d'), s, CARD_W, CARD_H, await slotImage(s));
+    urls.push(c.toDataURL('image/jpeg', 0.92));
+  }
+  const ticks = [];
+  for (const x of [0, 2.5, 5, 7.5]) ticks.push(`<i class="tick v" style="left:${0.5 + x}in;top:0"></i><i class="tick v" style="left:${0.5 + x}in;bottom:0"></i>`);
+  for (const y of [0, 3.5, 7, 10.5]) ticks.push(`<i class="tick h" style="top:${0.25 + y}in;left:0"></i><i class="tick h" style="top:${0.25 + y}in;right:0"></i>`);
+  $('#ins-print').innerHTML = `<div class="ins-page"><div class="ins-grid">${urls.map(u => `<img src="${u}" alt="">`).join('')}</div>${ticks.join('')}</div>`;
+  await Promise.all($$('#ins-print img').map(im => im.decode?.().catch(() => {})));
+  printWith('inserts');
+}
+function printWith(kind) {
+  $('#pagestyle').textContent = kind === 'inserts' ? '@page{size:letter;margin:0}' : '@page{size:letter;margin:0.4in}';
+  document.body.classList.toggle('print-ins', kind === 'inserts');
+  try { window.print(); } catch (err) { toast('Your browser blocked printing.'); }
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('print-ins'));
+
+/* send a binder title card to the maker */
+function titleToInsert(it) {
+  let slot = ins.slots.find(s => slotEmpty(s));
+  if (!slot) return toast('The insert sheet is full. Clear a card first.');
+  Object.assign(slot, { text: it.text || 'Title', bg: it.color || '#1B2B33', textPos: 'middle' });
+  saveIns();
+  closeModal(); go('inserts');
+  toast('Added to your insert sheet. Tap it to add a picture or border.');
+}
+
+$('#main').addEventListener('click', e => {
+  if (tab !== 'inserts') return;
+  const t = e.target.closest('[data-slot],[data-ins-act]'); if (!t) return;
+  if (t.dataset.slot !== undefined) return openInsertEditor(+t.dataset.slot);
+  if (t.dataset.insAct === 'print') return printInserts();
+  if (t.dataset.insAct === 'clear') return confirmBox('Clear the sheet?', 'Remove all 9 cards and their pictures?', 'Clear', async () => {
+    for (const s of ins.slots) await imgDB.del(s.id);
+    ins = { slots: Array.from({ length: 9 }, blankSlot) }; saveIns(); render();
+  });
+});
+$('#main').addEventListener('change', e => { if (tab === 'inserts' && e.target.id === 'insFiles') { addPictures(e.target.files); e.target.value = ''; } });
+// drop pictures straight onto the sheet (desktop)
+$('#main').addEventListener('dragover', e => { if (tab === 'inserts') e.preventDefault(); });
+$('#main').addEventListener('drop', e => { if (tab === 'inserts' && e.dataTransfer?.files?.length) { e.preventDefault(); addPictures(e.dataTransfer.files); } });
 
 /* ---------------- light / dark ---------------- */
 const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
@@ -1018,6 +1440,7 @@ $('#tabs').addEventListener('click', e => {
 });
 
 $('#main').addEventListener('click', e => {
+  if (DRAG.justDropped || tab === 'inserts') return;
   const b = cur(), t = e.target.closest('button, [data-i]'); if (!t) return;
   if (!b && !t.dataset.act && !t.dataset.open) return;
   const d = t.dataset;
@@ -1029,6 +1452,7 @@ $('#main').addEventListener('click', e => {
   }
   if (d.act === 'add') return openAdd();
   if (d.act === 'create') return openCreate();
+  if (d.act === 'inserts') return go('inserts');
   if (d.act === 'showall') { store.showAll = true; return commit(); }
   if (d.act === 'showless') { store.showAll = false; return commit(); }
   if (d.tap) { store.tapMode = d.tap; return commit(); }
@@ -1068,7 +1492,7 @@ $('#main').addEventListener('click', e => {
   }
   if (d.act === 'print') {
     if (framed) return toast('Printing works on your own site. This preview can’t open the print window.');
-    try { window.print(); } catch (err) { toast('Your browser blocked printing.'); }
+    printWith('guide');
   }
 });
 $('#main').addEventListener('change', e => {

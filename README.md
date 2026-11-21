@@ -17,5 +17,6 @@ Plan your real trading card binder before you sleeve a single card. Simple, ad-f
 - A binder is one ordered list of items (cards, empty pockets, titles, energy, page/spread breaks). Pages are calculated from that list every time, so switching binder size just re-flows.
 - Card data and pictures: TCGdex (`https://api.tcgdex.net/v2/en`). If the API can't be reached, demo sets are shown.
 
-## Next (Phase 2)
-Drag-to-rearrange, custom insert maker (upload, crop to 2.5 × 3.5 in, set-color borders, 3 × 3 print with cut lines).
+## Phase 2
+- Drag to rearrange: hold a card (touch) or drag it (mouse) onto any pocket; the page scrolls near the edges; Undo after every move.
+- Title & divider card maker: upload up to 9 of your own pictures, pan/zoom/rotate to card size, add a title, set-colored border or background, print 3 × 3 on letter at exactly 2.5 × 3.5 in with cut lines. Pictures are stored in the browser (IndexedDB). A title card in a binder can be sent straight to the maker.
