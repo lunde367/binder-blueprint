@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
-<meta name="theme-color" content="#0E1619">
+<meta name="theme-color" content="#EEF2F4">
+<script>try{var t=localStorage.getItem('binderBlueprint.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
 :root{
   --bg:#EEF2F4; --surface:#FFFFFF; --sunk:#E2E8EC; --fg:#15232B; --muted:#5B6B74; --line:#D3DCE1;
@@ -20,10 +21,14 @@
   --binder:#1B2B33; --binder-2:#263a44; --page:#F7F9FA;
   --zoom:1; color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
   --bg:#0E1619; --surface:#16222A; --sunk:#0A1114; --fg:#E4ECEF; --muted:#93A4AC; --line:#26353D;
   --accent:#3FC1C9; --accent-ink:#06282B; --have:#5BD08C; --have-bg:#123224; --need:#F59362; --need-bg:#3A1D10;
   --binder:#050A0C; --binder-2:#0d171b; --page:#1B2830; color-scheme:dark}}
+:root[data-theme=dark]{
+  --bg:#0E1619; --surface:#16222A; --sunk:#0A1114; --fg:#E4ECEF; --muted:#93A4AC; --line:#26353D;
+  --accent:#3FC1C9; --accent-ink:#06282B; --have:#5BD08C; --have-bg:#123224; --need:#F59362; --need-bg:#3A1D10;
+  --binder:#050A0C; --binder-2:#0d171b; --page:#1B2830; color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
@@ -48,7 +53,10 @@ header{display:flex;flex-direction:column;gap:6px}
 .sub{color:var(--muted);margin:0}
 .who{font-size:13px;color:var(--muted)}
 .bchip{border:0;background:none;color:var(--accent);font:600 13px var(--body);padding:0;text-align:right}
-.back{border:0;background:transparent;color:var(--accent);font:700 15px var(--body);padding:4px 0;align-self:flex-start}
+.hrow{display:flex;align-items:center;gap:10px;min-height:36px}
+.theme{margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 12px;border-radius:999px}
+.theme svg{width:16px;height:16px}
+.back{border:0;background:transparent;color:var(--accent);font:700 15px var(--body);padding:8px 8px 8px 0;min-height:40px;align-self:flex-start}
 .home{display:flex;flex-direction:column;gap:14px}
 .hero{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
 .hero .btn{font-size:18px;padding:16px 28px;min-height:56px}
@@ -115,12 +123,16 @@ main{display:flex;flex-direction:column;gap:14px}
 .pk{aspect-ratio:63/88;border-radius:5px;background:var(--sunk);position:relative;overflow:hidden;border:none;padding:0;display:block;width:100%}
 .pk.blank{background:var(--sunk);opacity:.7}
 .pk.empty{background:repeating-linear-gradient(45deg,var(--sunk),var(--sunk) 6px,transparent 6px,transparent 12px);box-shadow:inset 0 0 0 1.5px var(--line)}
-.pk .ph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:3px;background:var(--sunk);color:var(--muted);font:500 calc(9px*var(--zoom)) var(--mono);line-height:1.15;word-break:break-word}
-.pk .ph b{font-size:calc(11px*var(--zoom));color:var(--fg)}
+.pk .ph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;text-align:center;padding:4px;background:var(--sunk);color:var(--muted);font:600 calc(9px*var(--zoom)) var(--body);line-height:1.15;overflow-wrap:break-word;hyphens:auto}
+.pk .ph span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-width:100%}
+.pk .ph.under{display:none}
+.pk.broken .ph.under{display:flex}
+.pk .ph b{font:500 calc(11px*var(--zoom)) var(--mono);color:var(--fg)}
 .pk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .pk.need img,.pk.need .ph{filter:grayscale(1);opacity:.35}
 .pk.need{box-shadow:inset 0 0 0 1.5px var(--line)}
-.pk .tag{position:absolute;left:2px;bottom:2px;font:800 9px var(--body);text-transform:uppercase;letter-spacing:.04em;background:var(--need-bg);color:var(--need);border-radius:999px;padding:0 5px;line-height:1.6}
+.pk .tag{position:absolute;left:3px;bottom:3px;font:500 9px var(--mono);background:var(--surface);color:var(--muted);border-radius:4px;padding:0 4px;line-height:1.6;opacity:.95}
+.pk.need:has(.ph:not(.under)) .tag{display:none}
 .pk.own .tag{left:auto;right:3px;top:3px;bottom:auto;width:16px;height:16px;padding:0;border-radius:50%;background:var(--have);color:#fff;display:grid;place-items:center;font-size:10px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .pk.sel{outline:3px solid var(--accent);outline-offset:-3px}
 .pk.title,.titlepage{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:var(--display);font-weight:800;padding:4px;line-height:1.1;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.25)}
@@ -149,7 +161,7 @@ main{display:flex;flex-direction:column;gap:14px}
 .field>span:first-child,.where label,label.lab{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .inp{width:100%;min-height:42px}
 .pick3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.pickopt{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;font:700 14px var(--body);color:var(--fg)}
+.pickopt{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;min-height:112px;font:700 14px var(--body);color:var(--fg)}
 .pickopt.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
 .mini{display:grid;gap:2px;background:var(--binder);padding:4px;border-radius:5px}
 .mini i{display:block;width:12px;height:17px;background:#e9eef1;border-radius:1.5px}
@@ -185,9 +197,14 @@ main{display:flex;flex-direction:column;gap:14px}
 .preview{border-radius:12px;padding:10px 12px;font-size:14px;margin-top:12px;background:var(--have-bg);border:1px solid var(--have);color:var(--fg)}
 .preview.bad{background:var(--need-bg);border-color:var(--need)}
 .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;max-height:300px;overflow:auto}
-.results .pk{--zoom:.9}
+.results{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px 8px;max-height:min(46vh,380px)}
+.res{border:0;background:none;padding:0;display:flex;flex-direction:column;gap:4px;text-align:left;color:var(--fg);min-width:0}
+.res .pk{--zoom:.9}
+.res.sel .pk{outline:3px solid var(--accent);outline-offset:-3px}
+.res .cap{font-size:11px;line-height:1.25;color:var(--muted);overflow-wrap:anywhere}
+.res .cap b{display:block;color:var(--fg);font-size:12px}
 .results .pk .chk{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:900;display:none;place-items:center;z-index:2}
-.results .pk.sel .chk{display:grid}
+.results .res.sel .chk{display:grid}
 .results .pk.own .tag{display:none}
 .erow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
 .erow:last-child{border-bottom:0}
@@ -202,10 +219,14 @@ main{display:flex;flex-direction:column;gap:14px}
 .detail .dimg .pk{--zoom:1.4;border-radius:7px}
 .detail .grow{flex:1;min-width:0}
 .drow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hn{display:flex;width:100%}
+.hn button{flex:1;min-height:44px;font-size:15px}
+.hn button.on.have{background:var(--have-bg);color:var(--have)}
+.hn button.on.need{background:var(--need-bg);color:var(--need)}
 .havebtn{width:100%}
 .havebtn.on{background:var(--have-bg);color:var(--have);border-color:var(--have)}
 .havebtn.off{background:var(--need-bg);color:var(--need);border-color:var(--need)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
 
 /* ---------- sleeving guide ---------- */
 .gpages{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
@@ -252,14 +273,14 @@ main{display:flex;flex-direction:column;gap:14px}
 <div class="wrap">
   <header>
     <div class="foil"></div>
-    <button class="back" id="back" hidden>‹ My binders</button>
+    <div class="hrow"><button class="back" id="back" hidden>‹ My binders</button><button class="theme" id="theme" aria-label="Switch light or dark mode"></button></div>
     <h1 id="title">Binder Blueprint</h1>
     <p class="sub" id="sub">Plan your real binder before you sleeve a single card.</p>
   </header>
   <nav class="tabs" id="tabs">
     <a href="#binder" data-tab="binder">Binder</a>
-    <a href="#contents" data-tab="contents">What's inside</a>
-    <a href="#guide" data-tab="guide">Sleeving guide</a>
+    <a href="#contents" data-tab="contents">Contents</a>
+    <a href="#guide" data-tab="guide">Print</a>
     <a href="#setup" data-tab="setup">Setup</a>
   </nav>
   <div class="banner" id="banner"></div>
@@ -396,7 +417,8 @@ async function getSets() {
   if (setsCache) return setsCache;
   try {
     const raw = await getJSON(`${API}/sets`);
-    setsCache = raw.filter(s => s.cardCount && s.cardCount.total > 0)
+    // Skip TCG Pocket sets (A1, A2b, B1, P-A…): they're digital-only and can't go in a real binder.
+    setsCache = raw.filter(s => s.cardCount && s.cardCount.total > 0 && !/^(A|B)\d+[a-z]?$|^P-[A-Z]$/.test(s.id))
       .map(s => ({ id: s.id, name: s.name, total: s.cardCount.total, official: s.cardCount.official || s.cardCount.total }))
       .reverse();
   } catch (e) {
@@ -425,23 +447,25 @@ async function searchCards(q) {
     return out.slice(0, 150);
   }
   const raw = await getJSON(`${API}/cards?name=${encodeURIComponent(q)}`);
-  const names = Object.fromEntries(sets.map(s => [s.id, s.name]));
-  return raw.slice(0, 150).map(c => {
-    const setId = c.id.slice(0, c.id.lastIndexOf('-'));
-    return briefToCard(c, setId, names[setId] || setId);
-  });
+  const rank = Object.fromEntries(sets.map((s, i) => [s.id, i]));   // sets are newest first
+  return raw.map(c => ({ c, setId: c.id.slice(0, c.id.lastIndexOf('-')) }))
+    .filter(x => x.setId in rank)
+    .sort((a, b) => rank[a.setId] - rank[b.setId])
+    .slice(0, 150)
+    .map(x => briefToCard(x.c, x.setId, sets[rank[x.setId]].name));
 }
 
 /* ---------------- pockets ---------------- */
 function cardFace(it) {
-  return `<div class="ph" style="--h:${hue(it.set || it.name)}"><b>#${esc(it.num)}</b><span>${esc(it.name)}</span></div>` +
-    (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" onerror="this.remove()">` : '');
+  // The text placeholder shows only when there's no picture, or the picture fails to load.
+  return `<div class="ph${it.img ? ' under' : ''}"><b>#${esc(it.num)}</b><span>${esc(it.name)}</span></div>` +
+    (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('broken');this.remove()">` : '');
 }
 function pocketHTML(b, i, over) {
   const it = b.items[i];
   const o = over ? ' over-pk' : '';
   if (it.k === 'card')
-    return `<button class="pk ${it.own ? 'own' : 'need'}${o}" data-i="${i}" title="#${esc(it.num)} ${esc(it.name)}">${cardFace(it)}<span class="tag">${it.own ? '✓' : 'need'}</span></button>`;
+    return `<button class="pk ${it.own ? 'own' : 'need'}${o}" data-i="${i}" title="#${esc(it.num)} ${esc(it.name)}">${cardFace(it)}<span class="tag">${it.own ? '✓' : '#' + esc(it.num)}</span></button>`;
   if (it.k === 'empty') return `<button class="pk empty${o}" data-i="${i}" title="Empty pocket"></button>`;
   if (it.k === 'energy') return `<button class="pk energy${o}" data-i="${i}" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}</button>`;
   if (it.k === 'title') return `<button class="pk title${o}" data-i="${i}" style="background:${esc(it.color)}">${esc(it.text || 'Title')}</button>`;
@@ -466,7 +490,37 @@ function pageHTML(b, L, map, s) {
 const TABS = ['binder', 'contents', 'guide', 'setup'];
 let tab = (location.hash || '#home').slice(1);
 if (!TABS.includes(tab) || !cur()) tab = 'home';
-function go(t) { tab = t; history.replaceState(null, '', '#' + t); render(); window.scrollTo(0, 0); }
+/* Navigation uses browser history so the phone's back gesture works:
+   back closes an open window first, then goes from a binder to My binders. */
+let closingModal = false, afterPop = null;
+function go(t) {
+  if (closingModal) { afterPop = () => go(t); return; }
+  const st = history.state || {};
+  if (t === 'home') {
+    if (st.inBinder) { history.back(); return; }          // popstate renders home
+    history.replaceState(null, '', '#home');
+  } else if (tab === 'home') history.pushState({ inBinder: 1 }, '', '#' + t);
+  else history.replaceState({ inBinder: st.inBinder || 0 }, '', '#' + t);
+  tab = t; render(); window.scrollTo(0, 0);
+}
+window.addEventListener('popstate', () => {
+  if (closingModal) { closingModal = false; const f = afterPop; afterPop = null; if (f) f(); return; }
+  if ($('#modal-root').innerHTML) { $('#modal-root').innerHTML = ''; return; }
+  const t = location.hash.slice(1) || 'home';
+  tab = (t === 'home' || (TABS.includes(t) && cur())) ? t : 'home';
+  render(); window.scrollTo(0, 0);
+});
+function toggleOwn(i) {
+  const b = cur(), it = b.items[i]; if (!it || it.k !== 'card') return;
+  it.own = !it.own; save();
+  const el = tab === 'binder' && $(`#main .pk[data-i="${i}"]`);
+  if (!el) return render();
+  // Patch just this pocket and the counts, so pictures don't reload.
+  el.classList.toggle('own', it.own); el.classList.toggle('need', !it.own);
+  el.querySelector('.tag').textContent = it.own ? '✓' : '#' + it.num;
+  const st = $('#main .stats');
+  if (st) { const tmp = document.createElement('div'); tmp.innerHTML = statsHTML(b, layout(b)); st.replaceWith(tmp.querySelector('.stats')); }
+}
 
 function render() {
   const b = cur();
@@ -513,7 +567,7 @@ function openCreate() {
   $('#nGo', m).onclick = () => {
     const name = $('#nName', m).value.trim() || (store.binders.length ? `Binder ${store.binders.length + 1}` : 'My binder');
     const nb = newBinder(name, pockets, Math.max(1, Math.min(200, parseInt($('#nPages', m).value) || 20)));
-    store.binders.push(nb); store.cur = nb.id; closeModal(); save(); go('binder');
+    store.binders.push(nb); store.cur = nb.id; save(); closeModal(); go('binder');
   };
   setTimeout(() => $('#nName', m)?.focus(), 50);
 }
@@ -547,8 +601,8 @@ function renderBinder() {
   const total = Math.max(showTo, 1);
   let html = statsHTML(b, L) + `<div class="toolbar">
       <div class="seg" role="group" aria-label="When I tap a card">
-        <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap: details</button>
-        <button data-tap="own" class="${store.tapMode === 'own' ? 'on' : ''}">Tap: have it ✓</button>
+        <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap to open</button>
+        <button data-tap="own" class="${store.tapMode === 'own' ? 'on' : ''}">Tap to mark ✓</button>
       </div>
       <span class="grow"></span>
       <span style="display:flex;gap:6px"><button class="icon-btn" data-zoom="-1" aria-label="Smaller">−</button>
@@ -576,14 +630,13 @@ function renderBinder() {
 function renderContents() {
   const b = cur(), L = layout(b), order = sectionOrder(b);
   if (!order.length) { $('#main').innerHTML = `<div class="empty-state"><h2>Nothing inside yet</h2><p class="muted">Everything you add shows up here in binder order. You can move whole sets up and down.</p><button class="btn primary" data-act="add">＋ Add something</button></div>`; return; }
-  let h = `<p class="intro">This is the order things go into your binder. Move a whole set up or down and the pages re-arrange by themselves.</p><div class="secs">`;
+  let h = `<p class="intro">Everything in this binder, in order. Move a set up or down and the pages re-arrange by themselves.</p><div class="secs">`;
   order.forEach((sec, n) => {
     const st = secStats(b, L, sec), meta = b.sections[sec] || { label: 'Cards' };
     const pages = st.firstSide === null ? '' : (st.firstSide === st.lastSide ? `page ${st.firstSide + 1}` : `pages ${st.firstSide + 1}–${st.lastSide + 1}`);
-    h += `<button class="ins" data-insert="${sec}">＋ add here</button>
-      <div class="sec"><div class="sw" style="background:${st.color || `hsl(${hue(sec)} 50% 70%)`}"></div>
+    h += `      <div class="sec"><div class="sw" style="background:${st.color || `hsl(${hue(sec)} 50% 70%)`}"></div>
         <div class="info"><b>${esc(meta.label)}</b>
-          <span class="small muted">${pages}${st.cards ? ` · ${st.own}/${st.cards} cards have` : ''}${st.over ? ' · <b style="color:var(--danger);display:inline">doesn\'t fit</b>' : ''}</span></div>
+          <span class="small muted">${pages}${st.cards ? ` · have ${st.own} of ${st.cards}` : ''}${st.over ? ' · <b style="color:var(--danger);display:inline">doesn\'t fit</b>' : ''}</span></div>
         <div class="acts">
           ${st.cards ? `<button class="btn sm" data-own-all="${sec}">${st.own === st.cards ? 'Unmark all' : 'Have all ✓'}</button>` : ''}
           <button class="icon-btn" data-up="${sec}" ${n === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
@@ -591,7 +644,7 @@ function renderContents() {
           <button class="icon-btn" data-delsec="${sec}" aria-label="Remove" style="color:var(--danger)">✕</button>
         </div></div>`;
   });
-  h += `<button class="ins" data-act="add">＋ add at the end</button></div>`;
+  h += `</div>`;
   $('#main').innerHTML = h;
 }
 
@@ -605,7 +658,7 @@ function renderGuide() {
         <span class="grow"></span>
         <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>🖨 Print sleeving guide</button>
       </div>
-      <p class="intro">Print this and work one page at a time at the table. Each box is one pocket, read left to right, top to bottom. Tick the box when the card is in. Dashed boxes mean <b>leave that pocket empty</b> for a card you don't have yet.</p>
+      <p class="intro">Print it and fill one binder page at a time, left to right. Tick each box as the card goes in. Dashed boxes: <b>leave that pocket empty</b> for now.</p>
     </div>
     <div class="printhead"><h1>${esc(b.name)}</h1><div>Sleeving guide<br>${b.pockets}-pocket · ${b.pages} pages · ${new Date().toLocaleDateString()}</div></div>`;
   if (!total) { $('#main').innerHTML = h + `<div class="empty-state"><h2>Nothing to sleeve yet</h2><p class="muted">Add cards to your binder first.</p></div>`; return; }
@@ -666,12 +719,17 @@ function renderSetup() {
 
 /* ---------------- modal helpers ---------------- */
 function openModal(html, wide) {
+  if (!$('#modal-root').innerHTML) history.pushState({ ...(history.state || {}), modal: 1 }, '', location.href);
   $('#modal-root').innerHTML = `<div class="scrim"><div class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true">${html}</div></div>`;
   const scrim = $('#modal-root .scrim');
   scrim.addEventListener('click', e => { if (e.target === scrim || e.target.closest('[data-close]')) closeModal(); });
   return $('#modal-root .modal');
 }
-function closeModal() { $('#modal-root').innerHTML = ''; }
+function closeModal() {
+  if (!$('#modal-root').innerHTML) return;
+  $('#modal-root').innerHTML = '';
+  if (history.state && history.state.modal) { closingModal = true; history.back(); }
+}
 function confirmBox(title, msg, okLabel, fn) {
   const m = openModal(`<div class="mhead"><h2>${title}</h2></div><p>${msg}</p><div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="cOK">${okLabel}</button></div>`);
   $('#cOK', m).onclick = () => { closeModal(); fn(); };
@@ -680,7 +738,7 @@ let toastT;
 function toast(msg) {
   document.querySelector('.toast')?.remove();
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
-  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2000);
 }
 function commit(msg) { save(); render(); if (msg) toast(msg); }
 
@@ -748,7 +806,7 @@ function doAdd() {
   b.sections[sec] = { label: r.label };
   b.items.splice(idx, 0, ...r.items.map(x => ({ ...x, sec })));
   closeModal();
-  if (tab !== 'contents') { tab = 'binder'; history.replaceState(null, '', '#binder'); }
+  if (tab !== 'contents' && tab !== 'binder') { save(); toast(`Added ${r.label}`); return go('binder'); }
   commit(`Added ${r.label}`);
 }
 
@@ -823,7 +881,7 @@ function showAddTab() {
       <div id="pArea" style="margin-top:10px"></div>
       <div class="small" style="margin-top:8px"><b id="pCount">0 picked</b> <span class="muted">· tap cards to pick them, in the order you want them</span>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="oOwn" checked> I have these cards</label></div></div>`;
-    const resultsHTML = cards => cards.length ? `<div class="results">${cards.map((c, i) => `<button class="pk own ${sel.some(s => s.cid === c.cid) ? 'sel' : ''}" data-r="${i}" title="${esc(c.name)} · ${esc(c.setName)}">${cardFace(c)}<span class="chk">✓</span></button>`).join('')}</div>` : '<div class="muted small" style="padding:8px">No cards found.</div>';
+    const resultsHTML = cards => cards.length ? `<div class="results">${cards.map((c, i) => `<button class="res ${sel.some(s => s.cid === c.cid) ? 'sel' : ''}" data-r="${i}"><span class="pk own">${cardFace(c)}<span class="chk">✓</span></span><span class="cap"><b>${esc(c.name)}</b>${esc(c.setName)} · ${esc(c.num)}</span></button>`).join('')}</div>` : '<div class="muted small" style="padding:8px">No cards found.</div>';
     let shown = [];
     const wire = el => {
       el.onclick = e => {
@@ -912,8 +970,8 @@ function openItem(i) {
   let top = '';
   if (it.k === 'card') top = `<div class="detail"><div class="dimg"><div class="pk own">${cardFace(it)}</div></div><div class="grow">
       <h2>${esc(it.name)}</h2><p class="muted" style="margin:4px 0 12px">${esc(it.setName || '')} · #${esc(it.num)}<br>${spot}</p>
-      <button class="btn havebtn ${it.own ? 'on' : 'off'}" id="dOwn">${it.own ? '✓ Have it' : 'Need it'}</button>
-      <p class="small muted">${it.own ? 'Tap to mark it as missing.' : 'Tap when you get it. Until then its pocket stays empty.'}</p></div></div>`;
+      <div class="seg hn" id="dOwn" role="group" aria-label="Do you have this card?"><button class="${it.own ? 'on have' : ''}" data-own="1">✓ Have it</button><button class="${it.own ? '' : 'on need'}" data-own="0">Need it</button></div>
+      <p class="small muted">${it.own ? 'It goes in this pocket when you sleeve.' : 'Its pocket stays empty until you get it.'}</p></div></div>`;
   else if (it.k === 'title') top = `<h2 style="margin-bottom:10px">Title / divider</h2><p class="muted small">${spot}</p>
       <label class="field"><span>Text</span><input class="inp" id="dText" maxlength="40" value="${esc(it.text)}"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
@@ -923,7 +981,7 @@ function openItem(i) {
   const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
     <div class="drow"><button class="btn sm" id="dPrev">◀ Move earlier</button><button class="btn sm" id="dNext">Move later ▶</button></div>
     <div class="drow"><button class="btn sm" id="dEmpty">＋ Empty pocket before this</button><button class="btn sm danger" id="dDel">Remove</button></div>`);
-  $('#dOwn', m) && ($('#dOwn', m).onclick = () => { it.own = !it.own; commit(); openItem(i); });
+  $$('#dOwn button', m).forEach(btn => btn.onclick = () => { if (!!+btn.dataset.own !== !!it.own) toggleOwn(i); openItem(i); });
   $('#dText', m) && ($('#dText', m).oninput = e => { it.text = e.target.value; save(); render(); });
   $$('.swatches button', m).forEach(btn => btn.onclick = () => { it.color = btn.dataset.c; commit(); openItem(i); });
   $$('#dSize button', m).forEach(btn => btn.onclick = () => { it.size = btn.dataset.s; commit(); openItem(i); });
@@ -933,13 +991,30 @@ function openItem(i) {
   $('#dDel', m).onclick = () => { b.items.splice(i, 1); closeModal(); commit('Removed'); };
 }
 
+/* ---------------- light / dark ---------------- */
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11Z"/></svg>';
+const isDark = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+function paintTheme() {
+  const dark = isDark();
+  $('#theme').innerHTML = dark ? `${SUN}Light` : `${MOON}Dark`;
+  $('meta[name=theme-color]').content = dark ? '#0E1619' : '#EEF2F4';
+}
+$('#theme').onclick = () => {
+  const t = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('binderBlueprint.theme', t); } catch (e) {}
+  paintTheme();
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintTheme);
+paintTheme();
+
 /* ---------------- events ---------------- */
 $('#fab').onclick = () => openAdd();
 $('#back').onclick = () => go('home');
-window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t === 'home' || (TABS.includes(t) && cur())) { tab = t; render(); window.scrollTo(0, 0); } });
 $('#tabs').addEventListener('click', e => {
   const a = e.target.closest('a[data-tab]'); if (!a) return;
-  e.preventDefault(); tab = a.dataset.tab; history.replaceState(null, '', '#' + tab); render(); window.scrollTo(0, 0);
+  e.preventDefault(); go(a.dataset.tab);
 });
 
 $('#main').addEventListener('click', e => {
@@ -948,7 +1023,7 @@ $('#main').addEventListener('click', e => {
   const d = t.dataset;
   if (d.i !== undefined) {
     const it = b.items[+d.i];
-    if (store.tapMode === 'own' && it.k === 'card') { it.own = !it.own; commit(); }
+    if (store.tapMode === 'own' && it.k === 'card') toggleOwn(+d.i);
     else openItem(+d.i);
     return;
   }
@@ -956,7 +1031,7 @@ $('#main').addEventListener('click', e => {
   if (d.act === 'create') return openCreate();
   if (d.act === 'showall') { store.showAll = true; return commit(); }
   if (d.act === 'showless') { store.showAll = false; return commit(); }
-  if (d.tap) { store.tapMode = d.tap; return commit(d.tap === 'own' ? 'Tap a card to mark that you have it' : null); }
+  if (d.tap) { store.tapMode = d.tap; return commit(); }
   if (d.zoom) { store.zoom = Math.max(0.6, Math.min(1.8, Math.round((store.zoom + d.zoom * 0.2) * 10) / 10)); return commit(); }
   if (d.insert) return openAdd(d.insert);
   if (d.ownAll) {
@@ -1000,7 +1075,7 @@ $('#main').addEventListener('change', e => {
   const b = cur(), t = e.target;
   if (t.id === 'sName') { b.name = t.value.trim() || 'My binder'; commit(); }
   if (t.id === 'sPages') { b.pages = Math.max(1, Math.min(200, parseInt(t.value) || 1)); commit(); }
-  if (t.id === 'sSpreads') { b.spreads = t.checked; commit(t.checked ? 'Showing two-page spreads' : 'Showing one page at a time'); }
+  if (t.id === 'sSpreads') { b.spreads = t.checked; commit(); }
   if (t.dataset.g) { store.guide[t.dataset.g] = t.checked; commit(); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
