@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Binder Blueprint</title>
+<meta name="description" content="Plan your real trading card binder before you sleeve a single card.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<meta name="theme-color" content="#0E1619">
+<style>
+:root{
+  --bg:#EEF2F4; --surface:#FFFFFF; --sunk:#E2E8EC; --fg:#15232B; --muted:#5B6B74; --line:#D3DCE1;
+  --accent:#0E7C86; --accent-ink:#FFFFFF; --have:#1E8A4C; --have-bg:#DDF2E5; --need:#C2410C; --need-bg:#FBE6DA;
+  --foil:linear-gradient(115deg,#7FD6D9 0%,#C9B6F2 35%,#F6D38A 65%,#8FE0B5 100%);
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --binder:#1B2B33; --binder-2:#263a44; --page:#F7F9FA;
+  --zoom:1; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1619; --surface:#16222A; --sunk:#0A1114; --fg:#E4ECEF; --muted:#93A4AC; --line:#26353D;
+  --accent:#3FC1C9; --accent-ink:#06282B; --have:#5BD08C; --have-bg:#123224; --need:#F59362; --need-bg:#3A1D10;
+  --binder:#050A0C; --binder-2:#0d171b; --page:#1B2830; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:500 16px var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px;min-width:0}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);padding:0}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+.wrap{max-width:900px;margin:0 auto;padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(110px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,7vw,40px);line-height:1.05;margin:6px 0 0;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:800;font-size:22px;margin:0;line-height:1.15}
+h3{font-family:var(--display);font-weight:800;margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.num,.mono{font-family:var(--mono)}
+
+/* ---------- header ---------- */
+header{display:flex;flex-direction:column;gap:6px}
+.foil{height:6px;border-radius:3px;background:var(--foil)}
+.toprow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.sub{color:var(--muted);margin:0}
+.who{font-size:13px;color:var(--muted)}
+.bchip{border:0;background:none;color:var(--accent);font:600 13px var(--body);padding:0;text-align:right}
+.back{border:0;background:transparent;color:var(--accent);font:700 15px var(--body);padding:4px 0;align-self:flex-start}
+.home{display:flex;flex-direction:column;gap:14px}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+.hero .btn{font-size:18px;padding:16px 28px;min-height:56px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:520px}
+.steps div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.steps i{font-style:normal;width:30px;height:30px;border-radius:50%;background:var(--sunk);color:var(--fg);display:grid;place-items:center;font:800 14px var(--body)}
+.btile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;text-align:left;width:100%}
+.btile b{font-size:17px;display:block}
+.btile .meter{grid-column:1/-1;margin:0}
+.btile .go{color:var(--accent);font-weight:800;font-size:20px}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 0}
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px}
+.tabs a{flex:1;text-align:center;text-decoration:none;color:var(--muted);font:600 15px var(--body);padding:10px 6px;border-radius:9px;white-space:nowrap}
+.tabs a.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+@media (max-width:560px){
+  .tabs{overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs a{flex:0 0 auto;font-size:14px;padding:9px 12px;scroll-snap-align:start}
+}
+main{display:flex;flex-direction:column;gap:14px}
+.banner:empty{display:none}
+.note{font-size:13px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:10px 14px}
+.note b{color:var(--fg)}
+
+/* ---------- buttons ---------- */
+.btn{border:1px solid var(--line);background:transparent;color:var(--fg);font:700 15px var(--body);padding:11px 14px;border-radius:10px;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--need)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.icon-btn{border:1px solid var(--line);background:transparent;color:var(--fg);width:36px;height:36px;border-radius:9px;font:700 15px var(--body);display:inline-grid;place-items:center;flex:none;padding:0}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:14px 20px;font:700 16px var(--body);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.seg{display:inline-flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--body);padding:8px 12px;border-radius:9px;min-height:36px}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* ---------- stats / toolbars ---------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toolbar .grow{flex:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.stat b{display:block;font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.meter{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--foil)}
+.meter.over i{background:var(--need)}
+.warn{background:var(--need-bg);border:1px solid var(--need);color:var(--need);border-radius:12px;padding:10px 14px;font-weight:700}
+.warn span{font-weight:500}
+
+/* ---------- binder view ---------- */
+.spreads{display:flex;flex-direction:column;gap:18px;align-items:center}
+.spread-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.spread-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.spread{display:flex;gap:6px;background:linear-gradient(90deg,var(--binder),var(--binder-2) 50%,var(--binder));padding:12px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.spread.single{background:var(--binder)}
+.page{--pw:calc(min(42vw,330px)*var(--zoom));width:var(--pw);background:var(--page);border-radius:7px;padding:6px;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px;align-content:start;position:relative}
+.spread.single .page{--pw:calc(min(86vw,440px)*var(--zoom))}
+.page.cover{background:transparent;display:grid;place-items:center;color:#7d929c;font-size:12px;text-transform:uppercase;letter-spacing:.08em;text-align:center;border:1.5px dashed rgba(255,255,255,.14)}
+.page.over{background:var(--need-bg)}
+.page .pno{position:absolute;bottom:-1px;left:0;right:0;text-align:center;font:500 10px var(--mono);color:#7d929c;transform:translateY(100%);padding-top:2px}
+.page.over .pno{color:var(--need)}
+.pk{aspect-ratio:63/88;border-radius:5px;background:var(--sunk);position:relative;overflow:hidden;border:none;padding:0;display:block;width:100%}
+.pk.blank{background:var(--sunk);opacity:.7}
+.pk.empty{background:repeating-linear-gradient(45deg,var(--sunk),var(--sunk) 6px,transparent 6px,transparent 12px);box-shadow:inset 0 0 0 1.5px var(--line)}
+.pk .ph{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:3px;background:var(--sunk);color:var(--muted);font:500 calc(9px*var(--zoom)) var(--mono);line-height:1.15;word-break:break-word}
+.pk .ph b{font-size:calc(11px*var(--zoom));color:var(--fg)}
+.pk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pk.need img,.pk.need .ph{filter:grayscale(1);opacity:.35}
+.pk.need{box-shadow:inset 0 0 0 1.5px var(--line)}
+.pk .tag{position:absolute;left:2px;bottom:2px;font:800 9px var(--body);text-transform:uppercase;letter-spacing:.04em;background:var(--need-bg);color:var(--need);border-radius:999px;padding:0 5px;line-height:1.6}
+.pk.own .tag{left:auto;right:3px;top:3px;bottom:auto;width:16px;height:16px;padding:0;border-radius:50%;background:var(--have);color:#fff;display:grid;place-items:center;font-size:10px;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.pk.sel{outline:3px solid var(--accent);outline-offset:-3px}
+.pk.title,.titlepage{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:var(--display);font-weight:800;padding:4px;line-height:1.1;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.pk.title{font-size:calc(11px*var(--zoom))}
+.titlepage{grid-column:1/-1;aspect-ratio:auto;border-radius:5px;font-size:calc(22px*var(--zoom));border:none;min-height:100%}
+.pk.energy{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:calc(10px*var(--zoom));gap:3px}
+.pk.energy .orb{width:46%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8)}
+.pk.over-pk::after{content:"";position:absolute;inset:0;background:rgba(194,65,12,.18)}
+.more-pages{text-align:center}
+.empty-state{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:28px 20px;text-align:center;color:var(--muted)}
+.empty-state h2{color:var(--fg);margin-bottom:6px}
+
+/* ---------- contents ---------- */
+.intro{margin:0;color:var(--muted)}
+.secs{display:flex;flex-direction:column;gap:8px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center}
+.sec .sw{width:8px;align-self:stretch;border-radius:4px;flex:none}
+.sec .info{flex:1;min-width:0}
+.sec .info b{display:block;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ins{align-self:flex-start;border:0;background:none;color:var(--accent);font:700 14px var(--body);padding:2px 4px}
+
+/* ---------- panels / forms ---------- */
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span:first-child,.where label,label.lab{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.inp{width:100%;min-height:42px}
+.pick3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pickopt{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;font:700 14px var(--body);color:var(--fg)}
+.pickopt.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.mini{display:grid;gap:2px;background:var(--binder);padding:4px;border-radius:5px}
+.mini i{display:block;width:12px;height:17px;background:#e9eef1;border-radius:1.5px}
+.stepper{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stepper input{width:80px;text-align:center}
+.switch{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.blist{display:flex;flex-direction:column;gap:8px}
+.brow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;flex-wrap:wrap}
+.brow.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.brow .grow{flex:1;min-width:140px}
+.brow b{font-size:16px}
+.openlbl{font-weight:700;font-size:13px;color:var(--accent)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(5,10,12,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:700px){.scrim{align-items:center}}
+.modal{background:var(--bg);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.3)}
+@media(min-width:700px){.modal{border-radius:18px}}
+.modal.wide{max-width:760px}
+.mhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mhead h2{flex:1}
+.mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));background:var(--bg);padding:10px 0 4px}
+.addtabs{margin-bottom:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.setlist{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto}
+.setlist button{display:flex;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-weight:600}
+.setlist button span{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.setlist button.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+.where{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.where{grid-template-columns:1fr}}
+.where label{display:flex;flex-direction:column;gap:4px}
+.where select{text-transform:none;letter-spacing:0}
+.preview{border-radius:12px;padding:10px 12px;font-size:14px;margin-top:12px;background:var(--have-bg);border:1px solid var(--have);color:var(--fg)}
+.preview.bad{background:var(--need-bg);border-color:var(--need)}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;max-height:300px;overflow:auto}
+.results .pk{--zoom:.9}
+.results .pk .chk{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:900;display:none;place-items:center;z-index:2}
+.results .pk.sel .chk{display:grid}
+.results .pk.own .tag{display:none}
+.erow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.erow:last-child{border-bottom:0}
+.erow .dot{width:24px;height:24px;border-radius:50%}
+.erow b{flex:1}
+.erow .qty{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatches button{width:36px;height:36px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.swatches button.on{box-shadow:0 0 0 3px var(--fg)}
+.detail{display:flex;gap:16px;align-items:flex-start}
+.detail .dimg{width:150px;flex:none}
+.detail .dimg .pk{--zoom:1.4;border-radius:7px}
+.detail .grow{flex:1;min-width:0}
+.drow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.havebtn{width:100%}
+.havebtn.on{background:var(--have-bg);color:var(--have);border-color:var(--have)}
+.havebtn.off{background:var(--need-bg);color:var(--need);border-color:var(--need)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
+
+/* ---------- sleeving guide ---------- */
+.gpages{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.gpage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;break-inside:avoid;page-break-inside:avoid}
+.gpage h3{font-size:18px;display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.gpage h3 small{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ggrid{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px}
+.gcell{border:1px solid var(--line);border-radius:6px;padding:4px;font-size:10.5px;line-height:1.2;min-height:64px;display:flex;flex-direction:column;gap:2px;position:relative;overflow-wrap:anywhere}
+.gcell .gimg{height:62px;display:flex;justify-content:center;margin-bottom:2px}
+.gcell .gimg img{height:100%;border-radius:3px}
+.gcell b{font-size:11.5px}
+.gcell .n{font-family:var(--mono);font-size:10px}
+.gcell .tick{position:absolute;top:3px;right:3px;width:13px;height:13px;border:1.5px solid var(--muted);border-radius:3px;background:var(--surface)}
+.gcell.leave{border-style:dashed;background:var(--bg);color:var(--muted)}
+.gcell.leave b{color:var(--need)}
+.gcell.unused{border-color:transparent;background:var(--bg);color:var(--line);justify-content:center;align-items:center}
+.gcell.full{grid-column:1/-1;min-height:90px;justify-content:center;align-items:center;text-align:center;font-size:14px}
+.gsec-h{grid-column:1/-1;margin:8px 0 0;color:var(--need)}
+.printhead{display:none}
+
+@media (max-width:560px){
+  .stats{grid-template-columns:1fr 1fr;gap:6px}
+  .stats .stat:first-child{grid-column:1/-1}
+  .stat b{font-size:22px}
+  .sec{flex-wrap:wrap}
+  .sec .acts{width:100%;justify-content:flex-start;padding-left:20px}
+  .detail .dimg{width:110px}
+}
+@media print{
+  @page{size:letter;margin:0.4in}
+  :root{--bg:#fff;--surface:#fff;--sunk:#f2f2f2;--fg:#000;--muted:#444;--line:#bbb;--need:#9a3412}
+  body{background:#fff;color:#000;font-size:11px}
+  .wrap{padding:0;max-width:none;gap:0}
+  header,.tabs,.banner,.fab,.no-print,.toast,#modal-root{display:none!important}
+  .printhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px}
+  .printhead h1{font-size:20px;margin:0}
+  .printhead div{font-size:11px;color:#333;text-align:right}
+  .gpages{display:block}
+  .gpage{border:1px solid #999;margin-bottom:10px;border-radius:8px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="foil"></div>
+    <button class="back" id="back" hidden>‹ My binders</button>
+    <h1 id="title">Binder Blueprint</h1>
+    <p class="sub" id="sub">Plan your real binder before you sleeve a single card.</p>
+  </header>
+  <nav class="tabs" id="tabs">
+    <a href="#binder" data-tab="binder">Binder</a>
+    <a href="#contents" data-tab="contents">What's inside</a>
+    <a href="#guide" data-tab="guide">Sleeving guide</a>
+    <a href="#setup" data-tab="setup">Setup</a>
+  </nav>
+  <div class="banner" id="banner"></div>
+  <main id="main"></main>
+</div>
+<button class="fab" id="fab">＋ Add</button>
+<div id="modal-root"></div>
+
+<script>
+/* =========================================================
+   Binder Blueprint — Phase 1
+   One binder = one ordered list of items. Pages are calculated.
+   ========================================================= */
+const API = 'https://api.tcgdex.net/v2/en';
+const LS_KEY = 'binderBlueprint.v1';
+const GRID = {4:[2,2], 9:[3,3], 12:[3,4]};          // pockets -> [cols, rows]
+const TITLE_COLORS = ['#F2B705','#3A86FF','#E63946','#2A9D8F','#8E5CF7','#FF7AB6','#FF8C42','#2B2D42','#8D99AE'];
+const ENERGY = [['Grass','#4FAF5A'],['Fire','#EE5A2F'],['Water','#2F8FD8'],['Lightning','#E9B90C'],['Psychic','#9B4FB5'],['Fighting','#B5652F'],['Darkness','#3B3F4A'],['Metal','#8A95A3'],['Fairy','#E58BBE']];
+const ENERGY_COLOR = Object.fromEntries(ENERGY);
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hue = s => { let h = 0; for (const c of String(s)) h = (h*31 + c.charCodeAt(0)) % 360; return h; };
+const plural = (n, w, p) => `${n} ${n === 1 ? w : (p || w + 's')}`;
+const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+
+/* ---------------- storage ---------------- */
+function newBinder(name, pockets = 9, pages = 20) {
+  return { id: uid(), name, pockets, pages, spreads: true, items: [], sections: {}, created: Date.now() };
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY));
+    if (d && Array.isArray(d.binders)) return d;
+  } catch (e) {}
+  return { binders: [], cur: null, tapMode: 'details', zoom: 1, showAll: false, guide: { pics: true, skipBlank: true } };
+}
+let store = load();
+let storageOK = true;
+function save() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(store)); }
+  catch (e) { if (storageOK) { storageOK = false; renderBanner(); } }
+}
+const cur = () => store.binders.find(b => b.id === store.cur) || null;
+
+/* ---------------- layout engine ----------------
+   Walks the item list once and gives every item a pocket position.
+   side index s: 0 = first page (a right-hand page when the binder opens in spreads),
+   odd sides are left pages, even sides are right pages. */
+function layout(b, items = b.items) {
+  const P = b.pockets;
+  let pos = 0;
+  const at = new Array(items.length).fill(-1);
+  const fullSides = {};
+  const fresh = to => {
+    if (pos % P) pos = Math.ceil(pos / P) * P;
+    if (to === 'spread' && b.spreads && (pos / P) % 2 === 0) pos += P;   // jump to next left page
+  };
+  items.forEach((it, i) => {
+    if (it.k === 'break') { fresh(it.to); return; }
+    if (it.k === 'title' && it.size === 'page') { fresh('page'); at[i] = pos; fullSides[pos / P] = i; pos += P; return; }
+    at[i] = pos++;
+  });
+  const cap = b.pages * 2 * P;
+  return { at, used: pos, cap, P, fullSides, usedSides: Math.ceil(pos / P), capSides: b.pages * 2 };
+}
+function bySide(L) {
+  const m = {};
+  L.at.forEach((p, i) => { if (p < 0) return; const s = Math.floor(p / L.P); (m[s] ??= {})[p % L.P] = i; });
+  return m;
+}
+function sideWords(b, s) {
+  const sheet = Math.floor(s / 2) + 1, face = s % 2 ? 'back' : 'front';
+  const lr = b.spreads ? (s % 2 ? 'left page' : 'right page') : '';
+  return { label: `Page ${s + 1}`, lr, sheet: `binder page ${sheet}, ${face}` };
+}
+/* How would the binder look with these extra items? */
+function fitAdvice(b, L) {
+  if (L.used <= L.cap) return null;
+  const needSides = L.usedSides, extraSheets = Math.ceil((needSides - L.capSides) / 2);
+  const bigger = [9, 12].filter(p => p > b.pockets).find(p => layout({ ...b, pockets: p }).used <= b.pages * 2 * p);
+  return { needSides, extraSheets, bigger };
+}
+function adviceText(b, a) {
+  let t = `Add ${plural(a.extraSheets, 'more binder page')} (you have ${b.pages})`;
+  if (a.bigger) t += `, or switch to a ${a.bigger}-pocket binder`;
+  return t + '.';
+}
+
+/* ---------------- sections ---------------- */
+function sectionOrder(b) {
+  const seen = new Set(), out = [];
+  b.items.forEach(it => { if (!seen.has(it.sec)) { seen.add(it.sec); out.push(it.sec); } });
+  return out;
+}
+function secStats(b, L, sec) {
+  let cards = 0, own = 0, pockets = 0, first = Infinity, last = -1, color = null;
+  b.items.forEach((it, i) => {
+    if (it.sec !== sec) return;
+    if (it.k === 'card') { cards++; if (it.own) own++; }
+    if (it.k === 'title' && !color) color = it.color;
+    const p = L.at[i]; if (p < 0) return;
+    pockets += (it.k === 'title' && it.size === 'page') ? L.P : 1;
+    first = Math.min(first, p); last = Math.max(last, p + ((it.k === 'title' && it.size === 'page') ? L.P - 1 : 0));
+  });
+  return { cards, own, pockets, firstSide: first === Infinity ? null : Math.floor(first / L.P), lastSide: last < 0 ? null : Math.floor(last / L.P), color, over: last >= L.cap };
+}
+
+/* ---------------- card data (TCGdex, with offline demo) ---------------- */
+let demoMode = false;
+let setsCache = null;
+const setCache = {};
+async function getJSON(url) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
+  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  finally { clearTimeout(t); }
+}
+const DEMO_SETS = [
+  { id: 'demo-meadow', name: 'Demo Set · Meadow', official: 36, total: 40 },
+  { id: 'demo-volcano', name: 'Demo Set · Volcano', official: 98, total: 110 },
+  { id: 'demo-ocean', name: 'Demo Set · Deep Sea', official: 151, total: 165 },
+  { id: 'demo-sky', name: 'Demo Set · Sky Trainers', official: 24, total: 24 },
+];
+const DEMO_WORDS = ['Sprout','Ember','Ripple','Spark','Pebble','Gust','Shade','Bloom','Frost','Glimmer','Thorn','Cinder','Tide','Bolt','Moss','Drift'];
+function demoCards(set) {
+  return Array.from({ length: set.total }, (_, i) => {
+    const n = String(i + 1).padStart(3, '0');
+    return { cid: `${set.id}-${n}`, num: n, name: `${DEMO_WORDS[i % DEMO_WORDS.length]} ${set.name.split('· ')[1].split(' ')[0]}`, img: null, set: set.id, setName: set.name };
+  });
+}
+async function getSets() {
+  if (setsCache) return setsCache;
+  try {
+    const raw = await getJSON(`${API}/sets`);
+    setsCache = raw.filter(s => s.cardCount && s.cardCount.total > 0)
+      .map(s => ({ id: s.id, name: s.name, total: s.cardCount.total, official: s.cardCount.official || s.cardCount.total }))
+      .reverse();
+  } catch (e) {
+    demoMode = true;
+    setsCache = DEMO_SETS;
+  }
+  return setsCache;
+}
+async function getSet(id) {
+  if (setCache[id]) return setCache[id];
+  const sets = await getSets();
+  const meta = sets.find(s => s.id === id) || { id, name: id, total: 0, official: 0 };
+  if (demoMode) return (setCache[id] = { ...meta, cards: demoCards(meta) });
+  const d = await getJSON(`${API}/sets/${encodeURIComponent(id)}`);
+  const cards = (d.cards || []).map(c => briefToCard(c, id, d.name));
+  return (setCache[id] = { id, name: d.name, official: d.cardCount?.official || cards.length, total: cards.length, cards });
+}
+function briefToCard(c, setId, setName) {
+  return { cid: c.id, num: c.localId, name: c.name, img: c.image ? c.image + '/low.webp' : null, set: setId, setName };
+}
+async function searchCards(q) {
+  const sets = await getSets();
+  if (demoMode) {
+    const out = [];
+    for (const s of sets) out.push(...demoCards(s).filter(c => c.name.toLowerCase().includes(q.toLowerCase())));
+    return out.slice(0, 150);
+  }
+  const raw = await getJSON(`${API}/cards?name=${encodeURIComponent(q)}`);
+  const names = Object.fromEntries(sets.map(s => [s.id, s.name]));
+  return raw.slice(0, 150).map(c => {
+    const setId = c.id.slice(0, c.id.lastIndexOf('-'));
+    return briefToCard(c, setId, names[setId] || setId);
+  });
+}
+
+/* ---------------- pockets ---------------- */
+function cardFace(it) {
+  return `<div class="ph" style="--h:${hue(it.set || it.name)}"><b>#${esc(it.num)}</b><span>${esc(it.name)}</span></div>` +
+    (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" onerror="this.remove()">` : '');
+}
+function pocketHTML(b, i, over) {
+  const it = b.items[i];
+  const o = over ? ' over-pk' : '';
+  if (it.k === 'card')
+    return `<button class="pk ${it.own ? 'own' : 'need'}${o}" data-i="${i}" title="#${esc(it.num)} ${esc(it.name)}">${cardFace(it)}<span class="tag">${it.own ? '✓' : 'need'}</span></button>`;
+  if (it.k === 'empty') return `<button class="pk empty${o}" data-i="${i}" title="Empty pocket"></button>`;
+  if (it.k === 'energy') return `<button class="pk energy${o}" data-i="${i}" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}</button>`;
+  if (it.k === 'title') return `<button class="pk title${o}" data-i="${i}" style="background:${esc(it.color)}">${esc(it.text || 'Title')}</button>`;
+  return '';
+}
+function pageHTML(b, L, map, s) {
+  const [cols] = GRID[b.pockets];
+  const over = s >= L.capSides;
+  const w = sideWords(b, s);
+  let inner = '';
+  if (L.fullSides[s] !== undefined) {
+    const it = b.items[L.fullSides[s]];
+    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)}">${esc(it.text || 'Title page')}</button>`;
+  } else {
+    const row = map[s] || {};
+    for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
+  }
+  return `<div class="page${over ? ' over' : ''}" style="--cols:${cols}">${inner}<div class="pno">${over ? "doesn't fit · " : ''}p.${s + 1}</div></div>`;
+}
+
+/* ---------------- views ---------------- */
+const TABS = ['binder', 'contents', 'guide', 'setup'];
+let tab = (location.hash || '#home').slice(1);
+if (!TABS.includes(tab) || !cur()) tab = 'home';
+function go(t) { tab = t; history.replaceState(null, '', '#' + t); render(); window.scrollTo(0, 0); }
+
+function render() {
+  const b = cur();
+  if (!b && tab !== 'home') tab = 'home';
+  const home = tab === 'home';
+  $('#tabs').hidden = home;
+  $('#back').hidden = home;
+  $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
+  $('#title').textContent = home ? 'Binder Blueprint' : b.name;
+  $('#sub').textContent = home ? 'Plan your real binder before you sleeve a single card.' : `${b.pockets}-pocket binder · ${b.pages} pages`;
+  $('#fab').style.display = !home && b.items.length && (tab === 'binder' || tab === 'contents') ? '' : 'none';
+  document.documentElement.style.setProperty('--zoom', store.zoom);
+  ({ home: renderHome, binder: renderBinder, contents: renderContents, guide: renderGuide, setup: renderSetup })[tab]();
+}
+function renderHome() {
+  const steps = `<div class="steps"><div><i>1</i>Pick your binder</div><div><i>2</i>Add your cards</div><div><i>3</i>Print &amp; sleeve</div></div>`;
+  if (!store.binders.length) {
+    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="create">＋ Create a binder</button>${steps}</div>
+      <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
+    return;
+  }
+  $('#main').innerHTML = `<div class="home">${store.binders.map(x => {
+      const L = layout(x), cards = x.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length;
+      return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span><b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
+        <span class="meter${L.used > L.cap ? ' over' : ''}"><i style="width:${Math.min(100, Math.round(L.used / L.cap * 100))}%"></i></span></button>`;
+    }).join('')}
+    <button class="btn primary" data-act="create" style="align-self:flex-start">＋ Create a binder</button></div>
+    <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
+}
+function openCreate() {
+  let pockets = 9, pages = 20;
+  const m = openModal(`<div class="mhead"><h2>New binder</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="box">
+      <label class="field"><span>Name</span><input class="inp" id="nName" maxlength="60" placeholder="e.g. My favorite cards"></label>
+      <div class="field"><span>Pockets on each page</span>
+        <div class="pick3" id="nPk">${[4, 9, 12].map(p => `<button class="pickopt ${p === pockets ? 'on' : ''}" data-p="${p}">${miniGrid(p)}${p}-pocket</button>`).join('')}</div></div>
+      <div class="field"><span>How many pages?</span>
+        <div class="stepper"><button class="icon-btn" data-np="-1">−</button><input class="inp" id="nPages" type="number" min="1" max="200" value="${pages}"><button class="icon-btn" data-np="1">＋</button></div>
+        <span class="small muted">Count the plastic pages. You can change all of this later.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="nGo">Create binder</button></div>`);
+  $$('#nPk button', m).forEach(btn => btn.onclick = () => { pockets = +btn.dataset.p; $$('#nPk button', m).forEach(x => x.classList.toggle('on', x === btn)); });
+  $$('[data-np]', m).forEach(btn => btn.onclick = () => { const i = $('#nPages', m); i.value = Math.max(1, Math.min(200, (parseInt(i.value) || 20) + +btn.dataset.np)); });
+  $('#nGo', m).onclick = () => {
+    const name = $('#nName', m).value.trim() || (store.binders.length ? `Binder ${store.binders.length + 1}` : 'My binder');
+    const nb = newBinder(name, pockets, Math.max(1, Math.min(200, parseInt($('#nPages', m).value) || 20)));
+    store.binders.push(nb); store.cur = nb.id; closeModal(); save(); go('binder');
+  };
+  setTimeout(() => $('#nName', m)?.focus(), 50);
+}
+function renderBanner() {
+  let h = '';
+  if (!storageOK) h += `<div class="note"><b>Not saving:</b> This browser isn't letting the planner save. Your binder will reset when you close the page.</div>`;
+  $('#banner').innerHTML = h;
+}
+
+function statsHTML(b, L) {
+  const cards = b.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length;
+  const pct = Math.min(100, Math.round(L.used / L.cap * 100));
+  const a = fitAdvice(b, L);
+  return (a ? `<div class="warn">⚠️ Not everything fits! Your plan needs ${plural(a.needSides, 'page side')} but this binder has ${L.capSides}. <span>${adviceText(b, a)}</span></div>` : '') +
+  `<div class="stats">
+    <div class="stat"><b>${L.used}<small class="muted" style="font-size:15px"> / ${L.cap}</small></b><span>Pockets used</span><div class="meter${a ? ' over' : ''}"><i style="width:${pct}%"></i></div></div>
+    <div class="stat"><b>${Math.max(0, L.capSides - L.usedSides)}</b><span>Sides left of ${L.capSides}</span></div>
+    <div class="stat"><b>${own}<small class="muted" style="font-size:15px"> / ${cards.length}</small></b><span>Cards to sleeve</span></div>
+  </div>`;
+}
+
+function renderBinder() {
+  const b = cur(), L = layout(b), map = bySide(L);
+  if (!b.items.length) {
+    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="add">＋ Add cards</button>
+      <p class="muted" style="margin:0">A whole set, a few cards, or a title page.</p></div>`;
+    return;
+  }
+  const lastUsed = Math.max(L.usedSides, 1);
+  const showTo = store.showAll ? Math.max(L.capSides, L.usedSides) : Math.min(Math.max(lastUsed + (b.spreads && lastUsed % 2 === 0 ? 1 : 0), Math.min(2, L.capSides)), Math.max(L.capSides, lastUsed));
+  const total = Math.max(showTo, 1);
+  let html = statsHTML(b, L) + `<div class="toolbar">
+      <div class="seg" role="group" aria-label="When I tap a card">
+        <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap: details</button>
+        <button data-tap="own" class="${store.tapMode === 'own' ? 'on' : ''}">Tap: have it ✓</button>
+      </div>
+      <span class="grow"></span>
+      <span style="display:flex;gap:6px"><button class="icon-btn" data-zoom="-1" aria-label="Smaller">−</button>
+      <button class="icon-btn" data-zoom="1" aria-label="Bigger">＋</button></span>
+    </div><div class="spreads">`;
+  if (b.spreads) {
+    const groups = [[-1, 0]];
+    for (let s = 1; s < total; s += 2) groups.push([s, s + 1]);
+    for (const [l, r] of groups) {
+      const label = l < 0 ? 'Page 1' : (r < total ? `Pages ${l + 1}–${r + 1}` : `Page ${l + 1}`);
+      const left = l < 0 ? `<div class="page cover" style="--cols:1">inside<br>front cover</div>` : pageHTML(b, L, map, l);
+      const right = r < total ? pageHTML(b, L, map, r) : `<div class="page cover" style="--cols:1">inside<br>back cover</div>`;
+      html += `<div class="spread-wrap"><div class="spread-label">${label}</div><div class="spread">${left}${right}</div></div>`;
+    }
+  } else {
+    for (let s = 0; s < total; s++) html += `<div class="spread-wrap"><div class="spread-label">Page ${s + 1}</div><div class="spread single">${pageHTML(b, L, map, s)}</div></div>`;
+  }
+  html += `</div>`;
+  const hidden = L.capSides - total;
+  if (hidden > 0) html += `<div class="more-pages"><button class="btn sm" data-act="showall">Show the ${plural(hidden, 'empty page')} left</button></div>`;
+  else if (store.showAll && L.capSides > lastUsed + 1) html += `<div class="more-pages"><button class="btn sm" data-act="showless">Hide empty pages</button></div>`;
+  $('#main').innerHTML = html;
+}
+
+function renderContents() {
+  const b = cur(), L = layout(b), order = sectionOrder(b);
+  if (!order.length) { $('#main').innerHTML = `<div class="empty-state"><h2>Nothing inside yet</h2><p class="muted">Everything you add shows up here in binder order. You can move whole sets up and down.</p><button class="btn primary" data-act="add">＋ Add something</button></div>`; return; }
+  let h = `<p class="intro">This is the order things go into your binder. Move a whole set up or down and the pages re-arrange by themselves.</p><div class="secs">`;
+  order.forEach((sec, n) => {
+    const st = secStats(b, L, sec), meta = b.sections[sec] || { label: 'Cards' };
+    const pages = st.firstSide === null ? '' : (st.firstSide === st.lastSide ? `page ${st.firstSide + 1}` : `pages ${st.firstSide + 1}–${st.lastSide + 1}`);
+    h += `<button class="ins" data-insert="${sec}">＋ add here</button>
+      <div class="sec"><div class="sw" style="background:${st.color || `hsl(${hue(sec)} 50% 70%)`}"></div>
+        <div class="info"><b>${esc(meta.label)}</b>
+          <span class="small muted">${pages}${st.cards ? ` · ${st.own}/${st.cards} cards have` : ''}${st.over ? ' · <b style="color:var(--danger);display:inline">doesn\'t fit</b>' : ''}</span></div>
+        <div class="acts">
+          ${st.cards ? `<button class="btn sm" data-own-all="${sec}">${st.own === st.cards ? 'Unmark all' : 'Have all ✓'}</button>` : ''}
+          <button class="icon-btn" data-up="${sec}" ${n === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+          <button class="icon-btn" data-down="${sec}" ${n === order.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button>
+          <button class="icon-btn" data-delsec="${sec}" aria-label="Remove" style="color:var(--danger)">✕</button>
+        </div></div>`;
+  });
+  h += `<button class="ins" data-act="add">＋ add at the end</button></div>`;
+  $('#main').innerHTML = h;
+}
+
+function renderGuide() {
+  const b = cur(), L = layout(b), map = bySide(L), g = store.guide, [cols] = GRID[b.pockets];
+  const total = L.usedSides;
+  let h = `<div class="no-print stack" style="display:flex;flex-direction:column;gap:10px">
+      <div class="toolbar">
+        <label class="switch"><input type="checkbox" data-g="pics" ${g.pics ? 'checked' : ''}> Show card pictures</label>
+        <label class="switch"><input type="checkbox" data-g="skipBlank" ${g.skipBlank ? 'checked' : ''}> Skip blank pages</label>
+        <span class="grow"></span>
+        <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>🖨 Print sleeving guide</button>
+      </div>
+      <p class="intro">Print this and work one page at a time at the table. Each box is one pocket, read left to right, top to bottom. Tick the box when the card is in. Dashed boxes mean <b>leave that pocket empty</b> for a card you don't have yet.</p>
+    </div>
+    <div class="printhead"><h1>${esc(b.name)}</h1><div>Sleeving guide<br>${b.pockets}-pocket · ${b.pages} pages · ${new Date().toLocaleDateString()}</div></div>`;
+  if (!total) { $('#main').innerHTML = h + `<div class="empty-state"><h2>Nothing to sleeve yet</h2><p class="muted">Add cards to your binder first.</p></div>`; return; }
+  h += `<div class="gpages">`;
+  for (let s = 0; s < total; s++) {
+    if (s === L.capSides) h += `<h2 class="gsec-h">These don't fit in the binder yet</h2>`;
+    const row = map[s] || {};
+    const isFull = L.fullSides[s] !== undefined;
+    if (!isFull && !Object.keys(row).length && g.skipBlank) continue;
+    const w = sideWords(b, s);
+    let cells = '';
+    if (isFull) {
+      const it = b.items[L.fullSides[s]];
+      cells = `<div class="gcell full" style="border-left:8px solid ${esc(it.color)}"><span class="tick"></span><b>Title page</b>${esc(it.text)}<span class="muted">Fill all ${b.pockets} pockets with your title insert</span></div>`;
+    } else {
+      for (let k = 0; k < b.pockets; k++) {
+        const i = row[k];
+        if (i === undefined) { cells += `<div class="gcell unused">—</div>`; continue; }
+        const it = b.items[i];
+        if (it.k === 'card') {
+          cells += it.own
+            ? `<div class="gcell"><span class="tick"></span>${g.pics && it.img ? `<div class="gimg"><img src="${esc(it.img)}" alt="" onerror="this.parentNode.remove()"></div>` : ''}<b>${esc(it.name)}</b><span class="n">#${esc(it.num)}</span><span class="muted">${esc(it.setName || '')}</span></div>`
+            : `<div class="gcell leave"><b>Leave empty</b>for ${esc(it.name)}<span class="n">#${esc(it.num)}</span><span>${esc(it.setName || '')}</span></div>`;
+        } else if (it.k === 'empty') cells += `<div class="gcell leave"><b>Leave empty</b></div>`;
+        else if (it.k === 'energy') cells += `<div class="gcell" style="border-left:6px solid ${ENERGY_COLOR[it.type]}"><span class="tick"></span><b>${esc(it.type)}</b>Energy</div>`;
+        else if (it.k === 'title') cells += `<div class="gcell" style="border-left:6px solid ${esc(it.color)}"><span class="tick"></span><b>Title card</b>${esc(it.text)}</div>`;
+      }
+    }
+    h += `<section class="gpage"><h3>${w.label} <small>${w.lr ? w.lr + ' · ' : ''}${w.sheet}</small></h3><div class="ggrid" style="--cols:${cols}">${cells}</div></section>`;
+  }
+  $('#main').innerHTML = h + `</div>`;
+}
+
+function miniGrid(p) {
+  const [c, r] = GRID[p];
+  return `<div class="mini" style="grid-template-columns:repeat(${c},auto)">${'<i></i>'.repeat(c * r)}</div>`;
+}
+function renderSetup() {
+  const b = cur(), L = layout(b);
+  $('#main').innerHTML = `
+  <section class="box"><h2>This binder</h2>
+    <label class="field"><span>Name</span><input class="inp" id="sName" value="${esc(b.name)}" maxlength="60"></label>
+    <div class="field"><span>Pockets on each page</span>
+      <div class="pick3">${[4, 9, 12].map(p => `<button class="pickopt ${b.pockets === p ? 'on' : ''}" data-pockets="${p}">${miniGrid(p)}${p}-pocket</button>`).join('')}</div>
+      <span class="small muted">Switch any time: your cards stay in the same order and flow onto the new pages.</span></div>
+    <div class="field"><span>How many pages?</span>
+      <div class="stepper"><button class="icon-btn" data-pages="-1">−</button><input class="inp" id="sPages" type="number" min="1" max="200" value="${b.pages}"><button class="icon-btn" data-pages="1">＋</button>
+      <span class="muted">= ${b.pages * 2} sides · ${b.pages * 2 * b.pockets} pockets</span></div>
+      <span class="small muted">Count the plastic pages. Each one holds cards on the front and back. (A "20 page" binder has 40 sides.)</span></div>
+    <label class="switch"><input type="checkbox" id="sSpreads" ${b.spreads ? 'checked' : ''}> Opens as two-page spreads</label>
+    <p class="small muted" style="margin:6px 0 0 32px">Like a real binder: page 1 sits on the right, then pages 2 & 3 face each other, and so on. Turn off for one page at a time.</p>
+    ${L.used > L.cap ? `<div class="warn" style="margin-top:12px">⚠️ Your plan needs ${L.usedSides} sides; this binder has ${L.capSides}. ${adviceText(b, fitAdvice(b, L))}</div>` : ''}
+  </section>
+  <section class="box"><h2>Copy or delete</h2>
+    <div class="drow" style="margin:0"><button class="btn sm" data-dup="${b.id}">Make a copy</button><button class="btn sm danger" data-delb="${b.id}">Delete this binder</button></div>
+  </section>`;
+}
+
+/* ---------------- modal helpers ---------------- */
+function openModal(html, wide) {
+  $('#modal-root').innerHTML = `<div class="scrim"><div class="modal${wide ? ' wide' : ''}" role="dialog" aria-modal="true">${html}</div></div>`;
+  const scrim = $('#modal-root .scrim');
+  scrim.addEventListener('click', e => { if (e.target === scrim || e.target.closest('[data-close]')) closeModal(); });
+  return $('#modal-root .modal');
+}
+function closeModal() { $('#modal-root').innerHTML = ''; }
+function confirmBox(title, msg, okLabel, fn) {
+  const m = openModal(`<div class="mhead"><h2>${title}</h2></div><p>${msg}</p><div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="cOK">${okLabel}</button></div>`);
+  $('#cOK', m).onclick = () => { closeModal(); fn(); };
+}
+let toastT;
+function toast(msg) {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+function commit(msg) { save(); render(); if (msg) toast(msg); }
+
+/* ---------------- add dialog ---------------- */
+const ADD_TABS = [['set', 'Whole set'], ['range', 'Card range'], ['pick', 'Pick cards'], ['energy', 'Energy'], ['title', 'Title / divider'], ['empty', 'Empty pockets']];
+const A = { tab: 'set', build: null };
+
+function openAdd(beforeSec) {
+  const b = cur(), secs = sectionOrder(b);
+  const m = openModal(`
+    <div class="mhead"><h2>Add to your binder</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="seg addtabs">${ADD_TABS.map(([k, l]) => `<button data-at="${k}" class="${k === A.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div id="addBody"></div>
+    <div class="where">
+      <label>Put it <select class="inp" id="aPos"><option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
+      <label>Start it on <select class="inp" id="aStart"><option value="here">the next free pocket</option><option value="page">a fresh page</option>${b.spreads ? '<option value="spread">a fresh spread (left page)</option>' : ''}</select></label>
+    </div>
+    <div id="addPreview" class="preview">Pick something to add.</div>
+    <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="addGo" disabled>Add to binder</button></div>`, true);
+  $$('[data-at]', m).forEach(btn => btn.onclick = () => { A.tab = btn.dataset.at; $$('[data-at]', m).forEach(x => x.classList.toggle('on', x === btn)); showAddTab(); });
+  $('#aPos', m).onchange = refreshPreview;
+  $('#aStart', m).onchange = refreshPreview;
+  $('#addGo', m).onclick = doAdd;
+  showAddTab();
+}
+function insertIndex(b, pos) {
+  if (pos === 'end') return b.items.length;
+  const i = b.items.findIndex(it => it.sec === pos);
+  return i < 0 ? b.items.length : i;
+}
+function pendingItems() {
+  const r = A.build && A.build();
+  if (!r || !r.items.length) return null;
+  const start = $('#aStart').value;
+  return { label: r.label, items: (start !== 'here' ? [{ k: 'break', to: start }] : []).concat(r.items) };
+}
+function refreshPreview() {
+  const box = $('#addPreview'), go = $('#addGo'); if (!box) return;
+  const r = pendingItems();
+  if (!r) { box.className = 'preview'; box.textContent = 'Pick something to add.'; go.disabled = true; return; }
+  const b = cur(), idx = insertIndex(b, $('#aPos').value);
+  const items = [...b.items.slice(0, idx), ...r.items.map(x => ({ ...x, _new: 1 })), ...b.items.slice(idx)];
+  const L = layout(b, items), before = layout(b);
+  let first = Infinity, last = -1;
+  items.forEach((it, i) => { if (it._new && L.at[i] >= 0) { first = Math.min(first, L.at[i]); last = Math.max(last, L.at[i] + (it.k === 'title' && it.size === 'page' ? L.P - 1 : 0)); } });
+  const fs = Math.floor(first / L.P) + 1, ls = Math.floor(last / L.P) + 1;
+  const pockets = r.items.filter(x => x.k !== 'break').reduce((n, x) => n + (x.k === 'title' && x.size === 'page' ? L.P : 1), 0);
+  const sidesLeft = Math.max(0, L.capSides - before.usedSides);
+  const where = fs === ls ? `page ${fs}` : `pages ${fs}–${ls}`;
+  const moved = idx < b.items.length ? ' Everything after it moves along.' : '';
+  if (L.used > L.cap) {
+    const a = fitAdvice(b, L);
+    box.className = 'preview bad';
+    box.innerHTML = `⚠️ <b>${esc(r.label)} won't all fit.</b> It needs ${plural(ls - fs + 1, 'page side')} (${where}) and you have ${plural(sidesLeft, 'side')} left. ${adviceText(b, a)} You can still add it and fix it later.`;
+  } else {
+    box.className = 'preview';
+    box.innerHTML = `✓ <b>${esc(r.label)}</b>: ${plural(pockets, 'pocket')}, on ${where}.${moved}`;
+  }
+  go.disabled = false;
+  go.textContent = L.used > L.cap ? 'Add anyway' : 'Add to binder';
+}
+function doAdd() {
+  const r = pendingItems(); if (!r) return;
+  const b = cur(), sec = uid(), idx = insertIndex(b, $('#aPos').value);
+  b.sections[sec] = { label: r.label };
+  b.items.splice(idx, 0, ...r.items.map(x => ({ ...x, sec })));
+  closeModal();
+  if (tab !== 'contents') { tab = 'binder'; history.replaceState(null, '', '#binder'); }
+  commit(`Added ${r.label}`);
+}
+
+/* Reusable set picker */
+async function setPicker(el, onPick) {
+  el.innerHTML = `<input class="inp" placeholder="Search sets…" aria-label="Search sets"><div class="setlist"><div class="muted small" style="padding:8px">Loading sets…</div></div>`;
+  const inp = $('input', el), list = $('.setlist', el);
+  const sets = await getSets();
+  if (demoMode) list.insertAdjacentHTML('beforebegin', `<p class="small muted" style="margin:0">Preview: made-up demo sets. Real sets and pictures load on your own site.</p>`);
+  let picked = null;
+  const draw = () => {
+    const q = inp.value.trim().toLowerCase();
+    const f = sets.filter(s => !q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)).slice(0, 120);
+    list.innerHTML = f.map(s => `<button data-sid="${esc(s.id)}" class="${s.id === picked ? 'on' : ''}"><b>${esc(s.name)}</b><span>${s.total} cards</span></button>`).join('') || '<div class="muted small" style="padding:8px">No sets match.</div>';
+  };
+  inp.oninput = draw; draw();
+  list.onclick = e => {
+    const btn = e.target.closest('[data-sid]'); if (!btn) return;
+    picked = btn.dataset.sid; draw();
+    onPick(sets.find(s => s.id === picked));
+  };
+}
+function loadingInto(el, msg) { el.innerHTML = `<div class="muted small" style="padding:8px">${msg}</div>`; }
+
+function showAddTab() {
+  const body = $('#addBody'); A.build = null; refreshPreview();
+  const t = A.tab;
+  if (t === 'set') {
+    body.innerHTML = `<div class="panel"><div id="sp"></div><div id="setOpts"></div></div>`;
+    setPicker($('#sp'), async s => {
+      const o = $('#setOpts'); loadingInto(o, 'Loading cards…'); A.build = null; refreshPreview();
+      try {
+        const set = await getSet(s.id);
+        const secrets = set.total - set.official;
+        o.innerHTML = `<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+          <div><b>${esc(set.name)}</b> · ${set.official} cards${secrets > 0 ? ` + ${secrets} secret/extra` : ''}</div>
+          ${secrets > 0 ? `<label class="switch"><input type="checkbox" id="oSecret" checked> Include the ${secrets} secret/extra cards</label>` : ''}
+          <label class="switch"><input type="checkbox" id="oOwn"> I already have all of these</label>
+          <span class="small muted">Cards you don't have get an empty pocket saved for them. Tap a card later to mark it.</span></div>`;
+        const build = () => {
+          const inc = $('#oSecret') ? $('#oSecret').checked : true, own = $('#oOwn').checked;
+          const cards = inc ? set.cards : set.cards.slice(0, set.official);
+          return { label: set.name, items: cards.map(c => ({ k: 'card', ...c, own })) };
+        };
+        A.build = build; $$('input', o).forEach(i => i.onchange = refreshPreview); refreshPreview();
+      } catch (e) { o.innerHTML = `<div class="warn">Couldn't load that set. Check your internet and try again.</div>`; }
+    });
+  }
+  if (t === 'range') {
+    body.innerHTML = `<div class="panel"><div id="sp"></div><div id="rOpts"></div></div>`;
+    setPicker($('#sp'), async s => {
+      const o = $('#rOpts'); loadingInto(o, 'Loading cards…'); A.build = null; refreshPreview();
+      try {
+        const set = await getSet(s.id);
+        const opts = set.cards.map((c, i) => `<option value="${i}">#${esc(c.num)} ${esc(c.name)}</option>`).join('');
+        o.innerHTML = `<div class="where" style="margin-top:10px"><label>From <select class="inp" id="rFrom">${opts}</select></label><label>To <select class="inp" id="rTo">${opts}</select></label></div>
+          <label class="switch" style="margin-top:8px"><input type="checkbox" id="oOwn"> I already have all of these</label>`;
+        $('#rTo').value = String(Math.min(set.official, set.cards.length) - 1);
+        A.build = () => {
+          let a = +$('#rFrom').value, z = +$('#rTo').value; if (a > z) [a, z] = [z, a];
+          const own = $('#oOwn').checked;
+          return { label: `${set.name} #${set.cards[a].num}–#${set.cards[z].num}`, items: set.cards.slice(a, z + 1).map(c => ({ k: 'card', ...c, own })) };
+        };
+        $$('select,input', o).forEach(i => i.onchange = refreshPreview); refreshPreview();
+      } catch (e) { o.innerHTML = `<div class="warn">Couldn't load that set. Check your internet and try again.</div>`; }
+    });
+  }
+  if (t === 'pick') {
+    const sel = [];
+    body.innerHTML = `<div class="panel">
+      <div class="seg" id="pMode"><button data-pm="search" class="on">Search by name</button><button data-pm="browse">Browse a set</button></div>
+      <div id="pArea" style="margin-top:10px"></div>
+      <div class="small" style="margin-top:8px"><b id="pCount">0 picked</b> <span class="muted">· tap cards to pick them, in the order you want them</span>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="oOwn" checked> I have these cards</label></div></div>`;
+    const resultsHTML = cards => cards.length ? `<div class="results">${cards.map((c, i) => `<button class="pk own ${sel.some(s => s.cid === c.cid) ? 'sel' : ''}" data-r="${i}" title="${esc(c.name)} · ${esc(c.setName)}">${cardFace(c)}<span class="chk">✓</span></button>`).join('')}</div>` : '<div class="muted small" style="padding:8px">No cards found.</div>';
+    let shown = [];
+    const wire = el => {
+      el.onclick = e => {
+        const btn = e.target.closest('[data-r]'); if (!btn) return;
+        const c = shown[+btn.dataset.r], k = sel.findIndex(s => s.cid === c.cid);
+        if (k >= 0) sel.splice(k, 1); else sel.push(c);
+        btn.classList.toggle('sel', k < 0);
+        $('#pCount').textContent = `${sel.length} picked`; refreshPreview();
+      };
+    };
+    const modeSearch = () => {
+      const area = $('#pArea');
+      area.innerHTML = `<form id="pf" style="display:flex;gap:8px"><input class="inp" id="pq" placeholder="Card name, e.g. Pikachu or Nest Ball"><button class="btn">Search</button></form><div id="pRes"></div>`;
+      $('#pf').onsubmit = async e => {
+        e.preventDefault(); const q = $('#pq').value.trim(); if (q.length < 2) return;
+        const res = $('#pRes'); loadingInto(res, 'Searching…');
+        try { shown = await searchCards(q); res.innerHTML = resultsHTML(shown); wire(res); }
+        catch (err) { res.innerHTML = `<div class="warn">Search didn't work. Check your internet and try again.</div>`; }
+      };
+    };
+    const modeBrowse = () => {
+      const area = $('#pArea');
+      area.innerHTML = `<div id="sp"></div><div id="pRes"></div>`;
+      setPicker($('#sp'), async s => {
+        const res = $('#pRes'); loadingInto(res, 'Loading cards…');
+        try { shown = (await getSet(s.id)).cards; res.innerHTML = resultsHTML(shown); wire(res); }
+        catch (err) { res.innerHTML = `<div class="warn">Couldn't load that set.</div>`; }
+      });
+    };
+    $$('#pMode button').forEach(btn => btn.onclick = () => { $$('#pMode button').forEach(x => x.classList.toggle('on', x === btn)); (btn.dataset.pm === 'search' ? modeSearch : modeBrowse)(); });
+    modeSearch();
+    $('#oOwn').onchange = refreshPreview;
+    A.build = () => sel.length ? { label: sel.length === 1 ? sel[0].name : `${sel.length} picked cards`, items: sel.map(c => ({ k: 'card', ...c, own: $('#oOwn').checked })) } : null;
+  }
+  if (t === 'energy') {
+    const n = {};
+    body.innerHTML = `<div class="panel"><p class="small muted" style="margin-top:0">Basic energy cards. Choose how many of each.</p>${ENERGY.map(([e, c]) => `<div class="erow"><span class="dot" style="background:${c}"></span><b>${e}</b><button class="icon-btn" data-e="${e}" data-d="-1">−</button><span class="qty" id="en-${e}">0</span><button class="icon-btn" data-e="${e}" data-d="1">＋</button></div>`).join('')}</div>`;
+    body.onclick = e => {
+      const btn = e.target.closest('[data-e]'); if (!btn) return;
+      const k = btn.dataset.e; n[k] = Math.max(0, (n[k] || 0) + +btn.dataset.d); $(`#en-${k}`).textContent = n[k]; refreshPreview();
+    };
+    A.build = () => {
+      const items = []; ENERGY.forEach(([e]) => { for (let i = 0; i < (n[e] || 0); i++) items.push({ k: 'energy', type: e }); });
+      return items.length ? { label: `Energy (${items.length})`, items } : null;
+    };
+  } else body.onclick = null;
+  if (t === 'title') {
+    let color = TITLE_COLORS[0];
+    body.innerHTML = `<div class="panel">
+      <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
+      <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
+      <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button></div></div>
+      <div class="field" style="margin-bottom:0"><span>After the title…</span>
+        <select class="inp" id="tThen"><option value="continue">continue right after it</option><option value="page">start the next part on a fresh page</option>${cur().spreads ? '<option value="spread">start the next part on a fresh spread</option>' : ''}</select></div>
+      <p class="small muted" style="margin-bottom:0">Tip: you'll be able to design and print the actual title card in a later update.</p></div>`;
+    let size = 'pocket';
+    $$('.swatches button', body).forEach(btn => btn.onclick = () => { color = btn.dataset.c; $$('.swatches button', body).forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
+    $$('#tSize button').forEach(btn => btn.onclick = () => { size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
+    $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview;
+    A.build = () => {
+      const text = $('#tText').value.trim() || 'Title', then = $('#tThen').value;
+      return { label: `Title: ${text}`, items: [{ k: 'title', text, color, size }, ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
+    };
+    refreshPreview();
+  }
+  if (t === 'empty') {
+    body.innerHTML = `<div class="panel"><label class="field" style="margin-bottom:0"><span>How many empty pockets?</span><input class="inp" id="eN" type="number" min="1" max="500" value="1"><span class="small muted">Saves space for cards you'll add later (like promos or a set that's coming out).</span></label></div>`;
+    $('#eN').oninput = refreshPreview;
+    A.build = () => { const n = Math.max(0, Math.min(500, parseInt($('#eN').value) || 0)); return n ? { label: plural(n, 'empty pocket'), items: Array.from({ length: n }, () => ({ k: 'empty' })) } : null; };
+    refreshPreview();
+  }
+}
+
+/* ---------------- item detail ---------------- */
+function moveItem(i, d) {
+  const b = cur(), j = i + d; if (j < 0 || j >= b.items.length) return i;
+  const a = b.items[i], c = b.items[j];
+  [a.sec, c.sec] = [c.sec, a.sec];          // keep sections in one block
+  b.items[i] = c; b.items[j] = a;
+  return j;
+}
+function openItem(i) {
+  const b = cur(), it = b.items[i]; if (!it) return;
+  const L = layout(b), p = L.at[i], s = Math.floor(p / L.P), w = sideWords(b, s);
+  const spot = `${w.label}${w.lr ? ' (' + w.lr + ')' : ''}, pocket ${p % L.P + 1}`;
+  let top = '';
+  if (it.k === 'card') top = `<div class="detail"><div class="dimg"><div class="pk own">${cardFace(it)}</div></div><div class="grow">
+      <h2>${esc(it.name)}</h2><p class="muted" style="margin:4px 0 12px">${esc(it.setName || '')} · #${esc(it.num)}<br>${spot}</p>
+      <button class="btn havebtn ${it.own ? 'on' : 'off'}" id="dOwn">${it.own ? '✓ Have it' : 'Need it'}</button>
+      <p class="small muted">${it.own ? 'Tap to mark it as missing.' : 'Tap when you get it. Until then its pocket stays empty.'}</p></div></div>`;
+  else if (it.k === 'title') top = `<h2 style="margin-bottom:10px">Title / divider</h2><p class="muted small">${spot}</p>
+      <label class="field"><span>Text</span><input class="inp" id="dText" maxlength="40" value="${esc(it.text)}"></label>
+      <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
+      <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>`;
+  else if (it.k === 'energy') top = `<h2>${esc(it.type)} Energy</h2><p class="muted small">${spot}</p>`;
+  else top = `<h2>Empty pocket</h2><p class="muted small">${spot}. Saved for later.</p>`;
+  const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
+    <div class="drow"><button class="btn sm" id="dPrev">◀ Move earlier</button><button class="btn sm" id="dNext">Move later ▶</button></div>
+    <div class="drow"><button class="btn sm" id="dEmpty">＋ Empty pocket before this</button><button class="btn sm danger" id="dDel">Remove</button></div>`);
+  $('#dOwn', m) && ($('#dOwn', m).onclick = () => { it.own = !it.own; commit(); openItem(i); });
+  $('#dText', m) && ($('#dText', m).oninput = e => { it.text = e.target.value; save(); render(); });
+  $$('.swatches button', m).forEach(btn => btn.onclick = () => { it.color = btn.dataset.c; commit(); openItem(i); });
+  $$('#dSize button', m).forEach(btn => btn.onclick = () => { it.size = btn.dataset.s; commit(); openItem(i); });
+  $('#dPrev', m).onclick = () => { const j = moveItem(i, -1); commit(); openItem(j); };
+  $('#dNext', m).onclick = () => { const j = moveItem(i, 1); commit(); openItem(j); };
+  $('#dEmpty', m).onclick = () => { b.items.splice(i, 0, { k: 'empty', sec: it.sec }); commit('Empty pocket added'); openItem(i + 1); };
+  $('#dDel', m).onclick = () => { b.items.splice(i, 1); closeModal(); commit('Removed'); };
+}
+
+/* ---------------- events ---------------- */
+$('#fab').onclick = () => openAdd();
+$('#back').onclick = () => go('home');
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (t === 'home' || (TABS.includes(t) && cur())) { tab = t; render(); window.scrollTo(0, 0); } });
+$('#tabs').addEventListener('click', e => {
+  const a = e.target.closest('a[data-tab]'); if (!a) return;
+  e.preventDefault(); tab = a.dataset.tab; history.replaceState(null, '', '#' + tab); render(); window.scrollTo(0, 0);
+});
+
+$('#main').addEventListener('click', e => {
+  const b = cur(), t = e.target.closest('button, [data-i]'); if (!t) return;
+  if (!b && !t.dataset.act && !t.dataset.open) return;
+  const d = t.dataset;
+  if (d.i !== undefined) {
+    const it = b.items[+d.i];
+    if (store.tapMode === 'own' && it.k === 'card') { it.own = !it.own; commit(); }
+    else openItem(+d.i);
+    return;
+  }
+  if (d.act === 'add') return openAdd();
+  if (d.act === 'create') return openCreate();
+  if (d.act === 'showall') { store.showAll = true; return commit(); }
+  if (d.act === 'showless') { store.showAll = false; return commit(); }
+  if (d.tap) { store.tapMode = d.tap; return commit(d.tap === 'own' ? 'Tap a card to mark that you have it' : null); }
+  if (d.zoom) { store.zoom = Math.max(0.6, Math.min(1.8, Math.round((store.zoom + d.zoom * 0.2) * 10) / 10)); return commit(); }
+  if (d.insert) return openAdd(d.insert);
+  if (d.ownAll) {
+    const its = b.items.filter(x => x.sec === d.ownAll && x.k === 'card'), all = its.every(x => x.own);
+    its.forEach(x => x.own = !all); return commit(all ? 'Marked as missing' : 'Marked as have');
+  }
+  if (d.up || d.down) {
+    const sec = d.up || d.down, order = sectionOrder(b), k = order.indexOf(sec), k2 = k + (d.up ? -1 : 1);
+    if (k2 < 0 || k2 >= order.length) return;
+    [order[k], order[k2]] = [order[k2], order[k]];
+    b.items = order.flatMap(s => b.items.filter(x => x.sec === s));
+    return commit();
+  }
+  if (d.delsec) {
+    const label = (b.sections[d.delsec] || {}).label || 'this part';
+    return confirmBox('Remove this?', `Take <b>${esc(label)}</b> out of the binder plan?`, 'Remove', () => {
+      b.items = b.items.filter(x => x.sec !== d.delsec); delete b.sections[d.delsec]; commit('Removed');
+    });
+  }
+  if (d.pockets) { const p = +d.pockets; if (p !== b.pockets) { b.pockets = p; commit(`Now a ${p}-pocket binder. Everything moved to fit.`); } return; }
+  if (d.pages) { b.pages = Math.max(1, Math.min(200, b.pages + +d.pages)); return commit(); }
+  if (d.open) { store.cur = d.open; save(); return go('binder'); }
+  if (d.dup) {
+    const src = store.binders.find(x => x.id === d.dup), copy = JSON.parse(JSON.stringify(src));
+    copy.id = uid(); copy.name = src.name + ' (copy)'; store.binders.push(copy); store.cur = copy.id; save(); go('binder'); return toast('Copy made. You are in the copy now.');
+  }
+  if (d.delb) {
+    const x = store.binders.find(y => y.id === d.delb);
+    return confirmBox('Delete binder?', `Delete <b>${esc(x.name)}</b> and its whole plan? This can't be undone.`, 'Delete', () => {
+      store.binders = store.binders.filter(y => y.id !== d.delb);
+      if (store.cur === d.delb) store.cur = null;
+      save(); go('home'); toast('Binder deleted');
+    });
+  }
+  if (d.act === 'print') {
+    if (framed) return toast('Printing works on your own site. This preview can’t open the print window.');
+    try { window.print(); } catch (err) { toast('Your browser blocked printing.'); }
+  }
+});
+$('#main').addEventListener('change', e => {
+  const b = cur(), t = e.target;
+  if (t.id === 'sName') { b.name = t.value.trim() || 'My binder'; commit(); }
+  if (t.id === 'sPages') { b.pages = Math.max(1, Math.min(200, parseInt(t.value) || 1)); commit(); }
+  if (t.id === 'sSpreads') { b.spreads = t.checked; commit(t.checked ? 'Showing two-page spreads' : 'Showing one page at a time'); }
+  if (t.dataset.g) { store.guide[t.dataset.g] = t.checked; commit(); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ---------------- start ---------------- */
+render();
+getSets();
+</script>
+</body>
+</html>
