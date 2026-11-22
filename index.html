@@ -1483,7 +1483,8 @@ function openInsertEditor(k) {
           ${slot.hasImg ? `<button class="btn sm" id="ieRot">↻ Rotate</button><button class="btn sm" id="ieFit">Center</button><button class="btn sm danger" id="ieNoImg">Remove picture</button>` : ''}
         </div>
         ${slot.hasImg ? `<label class="field"><span>Zoom</span><input type="range" id="ieZoom" min="1" max="4" step="0.01" value="${slot.z}"></label>` : ''}
-        <label class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="e.g. Delta Reign"></label>
+        <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
+          <button class="btn sm" id="ieUseSet" hidden></button></div>
         <div class="field"><span>Title position</span><div class="seg" id="iePos">${['top', 'middle', 'bottom'].map(p => `<button data-p="${p}" class="${slot.textPos === p ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div></div>
         <div class="field"><span>Border</span>
           <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
@@ -1499,9 +1500,24 @@ function openInsertEditor(k) {
     const f = e.target.files[0]; if (!f) return;
     try { await setSlotPicture(slot, f); openInsertEditor(k); render(); } catch (err) { toast('That file isn’t a picture we can read.'); }
   };
-  $('#ieText', m).oninput = e => { slot.text = e.target.value; changed(); };
+  // Set names: suggestions while typing, and a one-tap "use the set's name" after picking a set border
+  getSets().then(sets => { const dl = $('#ieSets', m); if (dl) dl.innerHTML = sets.filter(x => !/promo|mcdonald|trainer kit|energy/i.test(x.name)).map(x => `<option value="${esc(x.name)}">`).join(''); });
+  const setName = () => (SET_BORDERS.find(([, c]) => c === slot.border) || [])[0];
+  const offerSet = () => {
+    const n = setName(), btn = $('#ieUseSet', m); if (!btn) return;
+    btn.hidden = !n || slot.text.trim() === n;
+    if (n) btn.textContent = `Use “${n}” as the title`;
+  };
+  $('#ieUseSet', m).onclick = () => { slot.text = setName(); $('#ieText', m).value = slot.text; offerSet(); changed(); };
+  $('#ieText', m).oninput = e => { slot.text = e.target.value; offerSet(); changed(); };
+  $('#ieText', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+  offerSet();
   $$('#iePos button', m).forEach(b => b.onclick = () => { slot.textPos = b.dataset.p; $$('#iePos button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
-  $$('#ieBorder button', m).forEach(b => b.onclick = () => { slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $$('#ieBorder button', m).forEach(b => b.onclick = () => {
+    slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b));
+    if (b.dataset.n && !slot.text.trim()) { slot.text = b.dataset.n; $('#ieText', m).value = slot.text; }   // empty title: use the set's name
+    offerSet(); changed();
+  });
   $$('#ieBg button', m).forEach(b => b.onclick = () => { slot.bg = b.dataset.c; $$('#ieBg button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
   if (!slot.hasImg) return;
