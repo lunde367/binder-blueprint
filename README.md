@@ -20,3 +20,10 @@ Plan your real trading card binder before you sleeve a single card. Simple, ad-f
 ## Phase 2
 - Drag to rearrange: hold a card (touch) or drag it (mouse) onto any pocket; the page scrolls near the edges; Undo after every move.
 - Title & divider card maker: upload up to 9 of your own pictures, pan/zoom/rotate to card size, add a title, set-colored border or background, print 3 × 3 on letter at exactly 2.5 × 3.5 in with cut lines. Pictures are stored in the browser (IndexedDB). A title card in a binder can be sent straight to the maker.
+
+## Accounts & sync
+- Optional sign-in with a 6-digit email code (Supabase Auth, project `Binder-Blueprint`). The app works fully signed out.
+- Local first: saves on the device instantly, uploads in the background, works offline.
+- Each binder is one row with a version number; conflicting edits are merged (have/need per card; newest wins for order/settings). The database keeps restore points (Setup → Earlier versions).
+- Family profiles (no emails for kids), title-card sheet and pictures sync too (pictures in a private storage bucket).
+- Row-level security: every account can only read and change its own rows and files.

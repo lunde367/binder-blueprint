@@ -54,6 +54,24 @@ header{display:flex;flex-direction:column;gap:6px}
 .who{font-size:13px;color:var(--muted)}
 .bchip{border:0;background:none;color:var(--accent);font:600 13px var(--body);padding:0;text-align:right}
 .hrow{display:flex;align-items:center;gap:10px;min-height:36px}
+.acct{margin-left:auto;display:inline-flex;align-items:center;gap:7px;min-height:36px;border:1px solid var(--accent);background:transparent;color:var(--accent);font:700 13px var(--body);padding:6px 12px;border-radius:999px;white-space:nowrap}
+.acct.in{border-color:var(--line);color:var(--fg);font-weight:600}
+.acct .dot{width:8px;height:8px;border-radius:50%;background:var(--have)}
+.acct.saving .dot,.acct.syncing .dot{background:#E0A030;animation:blink 1s infinite}
+.acct.offline .dot{background:var(--muted)}
+.acct.error .dot{background:var(--need)}
+@keyframes blink{50%{opacity:.3}}
+.hrow .acct + .theme{margin-left:0}
+.inp.code{font:600 24px var(--mono);letter-spacing:.3em;text-align:center}
+.mtag{display:inline-block;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-right:6px}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.nudge{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:12px 14px}
+.nudge p{margin:0;flex:1;font-size:14px;color:var(--muted)}
+#famBox .brow{flex-wrap:nowrap;padding:6px 8px}
+#famBox .brow .inp{flex:1;width:auto;min-width:0}
+.vlist{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.vrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.vrow span{flex:1}
 .theme{margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 12px;border-radius:999px}
 .theme svg{width:16px;height:16px}
 .back{border:0;background:transparent;color:var(--accent);font:700 15px var(--body);padding:8px 8px 8px 0;min-height:40px;align-self:flex-start}
@@ -313,7 +331,7 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
 <div class="wrap">
   <header>
     <div class="foil"></div>
-    <div class="hrow"><button class="back" id="back" hidden>‹ My binders</button><button class="theme" id="theme" aria-label="Switch light or dark mode"></button></div>
+    <div class="hrow"><button class="back" id="back" hidden>‹ My binders</button><button class="acct" id="acct"></button><button class="theme" id="theme" aria-label="Switch light or dark mode"></button></div>
     <h1 id="title">Binder Blueprint</h1>
     <p class="sub" id="sub">Plan your real binder before you sleeve a single card.</p>
   </header>
@@ -360,14 +378,15 @@ function load() {
     const d = JSON.parse(localStorage.getItem(LS_KEY));
     if (d && Array.isArray(d.binders)) return d;
   } catch (e) {}
-  return { binders: [], cur: null, tapMode: 'details', zoom: 1, showAll: false, guide: { pics: true, skipBlank: true } };
+  return { binders: [], members: [], cur: null, tapMode: 'details', zoom: 1, showAll: false, guide: { pics: true, skipBlank: true } };
 }
 let store = load();
 let storageOK = true;
-function save() {
+function saveLocal() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(store)); }
   catch (e) { if (storageOK) { storageOK = false; renderBanner(); } }
 }
+function save() { saveLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); }
 const cur = () => store.binders.find(b => b.id === store.cur) || null;
 
 /* ---------------- layout engine ----------------
@@ -586,20 +605,27 @@ function renderHome() {
       <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
     return;
   }
-  $('#main').innerHTML = `<div class="home">${store.binders.map(x => {
-      const L = layout(x), cards = x.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length;
-      return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span><b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
+  const ms = store.members || [];
+  if (store.who && !ms.some(x => x.id === store.who)) store.who = '';
+  const list = store.binders.filter(x => !store.who || x.member === store.who);
+  const chips = ms.length ? `<div class="chips chiprow"><button data-who="" class="${!store.who ? 'on' : ''}">Everyone</button>${ms.map(x => `<button data-who="${x.id}" class="${store.who === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}<button data-act="family">✎ Family</button></div>` : '';
+  const nudge = !Sync.user ? `<div class="nudge"><p>Sign in to keep your binders safe and use them on any device.</p><button class="btn sm" data-act="signin">Sign in</button></div>` : '';
+  $('#main').innerHTML = `<div class="home">${chips}${list.length ? '' : `<p class="intro">No binders for ${esc(memberName(store.who) || 'them')} yet.</p>`}${list.map(x => {
+      const L = layout(x), cards = x.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length, who = memberName(x.member);
+      return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span>${who ? `<span class="mtag">${esc(who)}</span>` : ''}<b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
         <span class="meter${L.used > L.cap ? ' over' : ''}"><i style="width:${Math.min(100, Math.round(L.used / L.cap * 100))}%"></i></span></button>`;
     }).join('')}
-    <button class="btn primary" data-act="create" style="align-self:flex-start">＋ Create a binder</button>
+    <div class="drow" style="margin:0"><button class="btn primary" data-act="create">＋ Create a binder</button>${ms.length ? '' : '<button class="btn ghost" data-act="family">Add family members</button>'}</div>
+    ${nudge}
     <button class="btile tool" data-act="inserts"><span class="ticon">✂︎</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button></div>
     <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
 }
 function openCreate() {
-  let pockets = 9, pages = 20;
+  let pockets = 9, pages = 20, who = store.who || '';
   const m = openModal(`<div class="mhead"><h2>New binder</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
     <div class="box">
       <label class="field"><span>Name</span><input class="inp" id="nName" maxlength="60" placeholder="e.g. My favorite cards"></label>
+      ${(store.members || []).length ? `<div class="field"><span>Whose binder?</span><div class="chips" id="nWho"><button data-w="" class="${store.who ? '' : 'on'}">Everyone</button>${store.members.map(x => `<button data-w="${x.id}" class="${store.who === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}</div></div>` : ''}
       <div class="field"><span>Pockets on each page</span>
         <div class="pick3" id="nPk">${[4, 9, 12].map(p => `<button class="pickopt ${p === pockets ? 'on' : ''}" data-p="${p}">${miniGrid(p)}${p}-pocket</button>`).join('')}</div></div>
       <div class="field"><span>How many pages?</span>
@@ -607,11 +633,13 @@ function openCreate() {
         <span class="small muted">Count the plastic pages. You can change all of this later.</span></div>
     </div>
     <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="nGo">Create binder</button></div>`);
+  $$('#nWho button', m).forEach(btn => btn.onclick = () => { who = btn.dataset.w; $$('#nWho button', m).forEach(x => x.classList.toggle('on', x === btn)); });
   $$('#nPk button', m).forEach(btn => btn.onclick = () => { pockets = +btn.dataset.p; $$('#nPk button', m).forEach(x => x.classList.toggle('on', x === btn)); });
   $$('[data-np]', m).forEach(btn => btn.onclick = () => { const i = $('#nPages', m); i.value = Math.max(1, Math.min(200, (parseInt(i.value) || 20) + +btn.dataset.np)); });
   $('#nGo', m).onclick = () => {
     const name = $('#nName', m).value.trim() || (store.binders.length ? `Binder ${store.binders.length + 1}` : 'My binder');
     const nb = newBinder(name, pockets, Math.max(1, Math.min(200, parseInt($('#nPages', m).value) || 20)));
+    nb.member = who || null;
     store.binders.push(nb); store.cur = nb.id; save(); closeModal(); go('binder');
   };
   setTimeout(() => $('#nName', m)?.focus(), 50);
@@ -746,6 +774,7 @@ function renderSetup() {
   $('#main').innerHTML = `
   <section class="box"><h2>This binder</h2>
     <label class="field"><span>Name</span><input class="inp" id="sName" value="${esc(b.name)}" maxlength="60"></label>
+    ${(store.members || []).length ? `<div class="field"><span>Whose binder?</span><div class="chips" id="sWho"><button data-sw="" class="${b.member ? '' : 'on'}">Everyone</button>${store.members.map(x => `<button data-sw="${x.id}" class="${b.member === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}</div></div>` : ''}
     <div class="field"><span>Pockets on each page</span>
       <div class="pick3">${[4, 9, 12].map(p => `<button class="pickopt ${b.pockets === p ? 'on' : ''}" data-pockets="${p}">${miniGrid(p)}${p}-pocket</button>`).join('')}</div>
       <span class="small muted">Switch any time: your cards stay in the same order and flow onto the new pages.</span></div>
@@ -757,9 +786,20 @@ function renderSetup() {
     <p class="small muted" style="margin:6px 0 0 32px">Like a real binder: page 1 sits on the right, then pages 2 & 3 face each other, and so on. Turn off for one page at a time.</p>
     ${L.used > L.cap ? `<div class="warn" style="margin-top:12px">⚠️ Your plan needs ${L.usedSides} sides; this binder has ${L.capSides}. ${adviceText(b, fitAdvice(b, L))}</div>` : ''}
   </section>
+  ${Sync.user ? `<section class="box"><h2>Earlier versions</h2><p class="small muted" style="margin:0">Saved automatically while you're signed in. Restore one if something went wrong.</p><div class="vlist" id="vList"><span class="small muted">Loading…</span></div></section>` : ''}
   <section class="box"><h2>Copy or delete</h2>
     <div class="drow" style="margin:0"><button class="btn sm" data-dup="${b.id}">Make a copy</button><button class="btn sm danger" data-delb="${b.id}">Delete this binder</button></div>
   </section>`;
+  if (Sync.user) loadVersions(b);
+}
+async function loadVersions(b) {
+  const el = $('#vList'); if (!el) return;
+  try {
+    const vs = await Sync.versions(b.id);
+    if (!$('#vList')) return;
+    $('#vList').innerHTML = vs.length ? vs.map(v => `<div class="vrow"><span>${new Date(v.saved_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span><button class="btn sm" data-restore="${v.vid}">Restore</button></div>`).join('')
+      : '<span class="small muted">No earlier versions yet. They appear as you make changes.</span>';
+  } catch (e) { $('#vList') && ($('#vList').innerHTML = '<span class="small muted">Couldn’t load versions. Check your internet.</span>'); }
 }
 
 /* ---------------- modal helpers ---------------- */
@@ -1172,7 +1212,8 @@ let ins = (() => {
   try { const d = JSON.parse(localStorage.getItem(INS_KEY)); if (d && Array.isArray(d.slots) && d.slots.length === 9) return d; } catch (e) {}
   return { slots: Array.from({ length: 9 }, blankSlot) };
 })();
-const saveIns = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
+const saveInsLocal = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
+const saveIns = () => { saveInsLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); };
 
 /* tiny IndexedDB store for pictures */
 const imgDB = (() => {
@@ -1217,6 +1258,7 @@ function readPicture(file) {
 async function setSlotPicture(slot, file) {
   const data = await readPicture(file);
   await imgDB.set(slot.id, data); delete imgEls[slot.id];
+  Sync.pictureChanged(slot.id);
   Object.assign(slot, { hasImg: true, x: 0, y: 0, z: 1, rot: 0 });
   saveIns();
 }
@@ -1336,12 +1378,12 @@ function openInsertEditor(k) {
   $$('#iePos button', m).forEach(b => b.onclick = () => { slot.textPos = b.dataset.p; $$('#iePos button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieBorder button', m).forEach(b => b.onclick = () => { slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieBg button', m).forEach(b => b.onclick = () => { slot.bg = b.dataset.c; $$('#ieBg button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
-  $('#ieClear', m).onclick = async () => { await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
+  $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
   if (!slot.hasImg) return;
   const zoom = $('#ieZoom', m);
   $('#ieRot', m).onclick = () => { slot.rot = (slot.rot + 90) % 360; changed(); };
   $('#ieFit', m).onclick = () => { Object.assign(slot, { x: 0, y: 0, z: 1 }); zoom.value = 1; changed(); };
-  $('#ieNoImg', m).onclick = async () => { await imgDB.del(slot.id); delete imgEls[slot.id]; slot.hasImg = false; saveIns(); openInsertEditor(k); render(); };
+  $('#ieNoImg', m).onclick = async () => { Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; slot.hasImg = false; saveIns(); openInsertEditor(k); render(); };
   zoom.oninput = () => { slot.z = +zoom.value; changed(); };
   // drag to pan, pinch / wheel to zoom
   const pts = new Map(); let last = null;
@@ -1404,7 +1446,7 @@ $('#main').addEventListener('click', e => {
   if (t.dataset.slot !== undefined) return openInsertEditor(+t.dataset.slot);
   if (t.dataset.insAct === 'print') return printInserts();
   if (t.dataset.insAct === 'clear') return confirmBox('Clear the sheet?', 'Remove all 9 cards and their pictures?', 'Clear', async () => {
-    for (const s of ins.slots) await imgDB.del(s.id);
+    for (const s of ins.slots) { if (s.hasImg) Sync.pictureChanged(s.id, true); await imgDB.del(s.id); }
     ins = { slots: Array.from({ length: 9 }, blankSlot) }; saveIns(); render();
   });
 });
@@ -1412,6 +1454,374 @@ $('#main').addEventListener('change', e => { if (tab === 'inserts' && e.target.i
 // drop pictures straight onto the sheet (desktop)
 $('#main').addEventListener('dragover', e => { if (tab === 'inserts') e.preventDefault(); });
 $('#main').addEventListener('drop', e => { if (tab === 'inserts' && e.dataTransfer?.files?.length) { e.preventDefault(); addPictures(e.dataTransfer.files); } });
+
+/* ---------------- accounts & sync (Supabase) ----------------
+   Local first: everything saves on this device instantly, then uploads in the background.
+   Each binder is one row (owner, id) with a version number. If another device changed it
+   since we last synced, the two are merged: have/need marks are merged card by card, and
+   for the order and settings the most recent edit wins (the server keeps a restore point). */
+const SB_URL = 'https://nlcamypmyvqomoumbekq.supabase.co';
+const SB_KEY = 'sb_publishable_L7MZxuzmCKkDd3ZK8dVCFQ_j_hidAU_';
+const SYNC_KEY = 'binderBlueprint.sync';
+const PIC_BUCKET = 'insert-images';
+
+const hashStr = str => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36); };
+const binderData = b => ({ name: b.name, pockets: b.pockets, pages: b.pages, spreads: b.spreads, member: b.member || null, items: b.items, sections: b.sections, created: b.created });
+const structSig = d => hashStr(JSON.stringify([d.items.map(({ own, ...r }) => r), d.sections]));
+const settingsSig = d => hashStr(JSON.stringify([d.name, d.pockets, d.pages, d.spreads, d.member || null]));
+const ownedList = d => d.items.filter(i => i.k === 'card' && i.own).map(i => i.cid);
+const baseOf = d => ({ struct: structSig(d), settings: settingsSig(d), owned: ownedList(d) });
+const dataSig = d => hashStr(JSON.stringify(d));
+
+function mergeBinder(local, server, serverAt, base) {
+  const L = binderData(local), S = server;
+  const localNewer = (local.editedAt || 0) > Date.parse(serverAt || 0);
+  const lStruct = structSig(L) !== base.struct, sStruct = structSig(S) !== base.struct;
+  const lSet = settingsSig(L) !== base.settings, sSet = settingsSig(S) !== base.settings;
+  const st = sStruct && (!lStruct || !localNewer) ? S : L;
+  const se = sSet && (!lSet || !localNewer) ? S : L;
+  const out = { name: se.name, pockets: se.pockets, pages: se.pages, spreads: se.spreads, member: se.member || null, created: L.created || S.created,
+    items: JSON.parse(JSON.stringify(st.items)), sections: JSON.parse(JSON.stringify(st.sections || {})) };
+  const was = new Set(base.owned || []), lo = {}, so = {};
+  L.items.forEach(i => { if (i.k === 'card') lo[i.cid] = !!i.own; });
+  S.items.forEach(i => { if (i.k === 'card') so[i.cid] = !!i.own; });
+  out.items.forEach(i => {
+    if (i.k !== 'card') return;
+    const c = i.cid, lChanged = c in lo && lo[c] !== was.has(c);
+    i.own = lChanged ? lo[c] : (c in so ? so[c] : (c in lo ? lo[c] : !!i.own));
+  });
+  return out;
+}
+
+const Sync = {
+  sb: null, user: null, status: 'off', channel: null, timer: 0, busy: false, again: false, loading: null,
+  meta: (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { return {}; } })(),
+  saveMeta() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(this.meta)); } catch (e) {} },
+  setStatus(s) { this.status = s; paintAccount(); },
+  hasStoredSession() { try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; } },
+
+  async load() {
+    if (this.sb) return this.sb;
+    return this.loading ??= (async () => {
+      try {
+        const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+        this.sb = mod.createClient(SB_URL, SB_KEY, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
+        this.sb.auth.onAuthStateChange((ev, session) => {
+          const u = session?.user || null;
+          if (u && (!this.user || this.user.id !== u.id)) { this.user = u; setTimeout(() => this.start(), 0); }
+          else if (!u && this.user) { this.user = null; this.stop(); }
+          paintAccount();
+        });
+        if (/[?&]code=/.test(location.search)) history.replaceState(history.state, '', location.pathname + location.hash);
+        const { data } = await this.sb.auth.getSession();
+        if (data.session && !this.user) { this.user = data.session.user; setTimeout(() => this.start(), 0); }
+        return this.sb;
+      } catch (e) { this.loading = null; this.setStatus('offline'); return null; }
+    })();
+  },
+
+  async start() {
+    const uid = this.user.id;
+    if (this.meta.uid !== uid) this.meta = { uid, binders: {}, account: null, tomb: [], pics: {} };
+    this.meta.binders ??= {}; this.meta.tomb ??= []; this.meta.pics ??= {};
+    // pictures already on this device go up with the account
+    ins.slots.forEach(s => { if (s.hasImg && !(s.id in this.meta.pics)) this.meta.pics[s.id] = 'up'; });
+    this.saveMeta();
+    this.setStatus('syncing');
+    await this.pull();
+    this.subscribe();
+    await this.push();
+  },
+  stop() {
+    if (this.channel) { this.sb.removeChannel(this.channel); this.channel = null; }
+    this.setStatus('off');
+  },
+  subscribe() {
+    if (this.channel || !this.user) return;
+    let t = 0;
+    const soon = () => { clearTimeout(t); t = setTimeout(() => this.pull(), 400); };
+    this.channel = this.sb.channel('mine')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'binders', filter: `owner=eq.${this.user.id}` }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'account_data', filter: `owner=eq.${this.user.id}` }, soon)
+      .subscribe();
+  },
+
+  /* ---- download ---- */
+  async pull() {
+    if (!this.user) return;
+    if (this.busy) { this.again = 'pull'; return; }
+    this.busy = true;
+    try {
+      const { data: rows, error } = await this.sb.from('binders').select('id,data,version,deleted,updated_at');
+      if (error) throw error;
+      let changed = false;
+      for (const row of rows) {
+        const m = this.meta.binders[row.id];
+        const k = store.binders.findIndex(b => b.id === row.id);
+        const local = store.binders[k];
+        if (m && row.version <= m.v) continue;                       // nothing new (or our own echo)
+        if (row.deleted) {
+          if (local && (!m || dataSig(binderData(local)) === m.sig)) { store.binders.splice(k, 1); if (store.cur === row.id) { store.cur = null; if (tab !== 'home') tab = 'home'; } changed = true; }
+          this.meta.binders[row.id] = { v: row.version, sig: null, base: baseOf(row.data), deleted: true };
+          continue;
+        }
+        if (!local) {
+          store.binders.push({ id: row.id, ...row.data });
+          this.meta.binders[row.id] = { v: row.version, sig: dataSig(row.data), base: baseOf(row.data) };
+          changed = true; continue;
+        }
+        const unchanged = m && dataSig(binderData(local)) === m.sig;
+        const next = unchanged ? row.data : mergeBinder(local, row.data, row.updated_at, m ? m.base : baseOf({ items: [], sections: {} }));
+        Object.assign(local, next); if (unchanged) delete local.editedAt; else this.again = 'push';
+        this.meta.binders[row.id] = { v: row.version, sig: dataSig(row.data), base: baseOf(row.data) };
+        changed = true;
+      }
+      // account: family members + title-card sheet
+      const { data: acc } = await this.sb.from('account_data').select('members,inserts,version').maybeSingle();
+      const ma = this.meta.account;
+      if (acc && (!ma || acc.version > ma.v)) {
+        const localSig = hashStr(JSON.stringify([store.members || [], ins.slots]));
+        const unchanged = ma && localSig === ma.sig;
+        if (unchanged || !ma) {
+          const mem = new Map((acc.members || []).map(x => [x.id, x]));
+          if (!unchanged) (store.members || []).forEach(x => { if (!mem.has(x.id)) mem.set(x.id, x); });   // first sign-in: keep both
+          store.members = [...mem.values()];
+          if (acc.inserts && (unchanged || ins.slots.every(slotEmpty))) { ins = acc.inserts; saveInsLocal(); }
+        } else {
+          const mem = new Map((acc.members || []).map(x => [x.id, x]));
+          (store.members || []).forEach(x => mem.set(x.id, x));
+          store.members = [...mem.values()];
+        }
+        this.meta.account = { v: acc.version, sig: hashStr(JSON.stringify([acc.members || [], acc.inserts ? acc.inserts.slots : null])) };
+        changed = true;
+      }
+      this.saveMeta();
+      if (changed) { saveLocal(); render(); }
+      await this.fetchPictures();
+      this.setStatus(!navigator.onLine ? 'offline' : this.pending() ? 'saving' : 'ok');
+    } catch (e) { this.setStatus(navigator.onLine ? 'error' : 'offline'); }
+    finally { this.busy = false; this.flushAgain(); }
+  },
+  async fetchPictures() {
+    for (const s of ins.slots) {
+      if (!s.hasImg || await imgDB.get(s.id)) continue;
+      const { data } = await this.sb.storage.from(PIC_BUCKET).download(`${this.user.id}/${s.id}.jpg`);
+      if (!data) continue;
+      const url = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(data); });
+      await imgDB.set(s.id, url); delete imgEls[s.id];
+      if (tab === 'inserts') render();
+    }
+  },
+
+  /* ---- upload ---- */
+  schedule() { if (!this.user) return; clearTimeout(this.timer); this.setStatus('saving'); this.timer = setTimeout(() => this.push(), 1200); },
+  flushAgain() { const a = this.again; this.again = false; if (a === 'pull') this.pull(); else if (a) this.push(); },
+  async push() {
+    if (!this.user) return;
+    if (this.busy) { this.again = this.again || 'push'; return; }
+    if (!navigator.onLine) return this.setStatus('offline');
+    this.busy = true;
+    try {
+      for (const id of [...this.meta.tomb]) {
+        const { data: row } = await this.sb.from('binders').select('version').eq('id', id).maybeSingle();
+        if (row) {
+          const { error } = await this.sb.from('binders').update({ deleted: true, version: row.version + 1 }).eq('id', id);
+          if (error) throw error;
+          this.meta.binders[id] = { ...(this.meta.binders[id] || {}), v: row.version + 1, deleted: true, sig: null };
+        }
+        this.meta.tomb = this.meta.tomb.filter(x => x !== id);
+      }
+      for (const b of store.binders) await this.pushBinder(b);
+      await this.pushAccount();
+      await this.pushPictures();
+      this.saveMeta();
+      this.setStatus('ok');
+    } catch (e) { this.saveMeta(); this.setStatus(navigator.onLine ? 'error' : 'offline'); }
+    finally { this.busy = false; this.flushAgain(); }
+  },
+  async pushBinder(b, tries = 0) {
+    const d = binderData(b), sig = dataSig(d), m = this.meta.binders[b.id];
+    if (m && m.sig === sig && !m.deleted) return;
+    if (!b.editedAt) b.editedAt = Date.now();
+    if (!m) {
+      const { error } = await this.sb.from('binders').insert({ id: b.id, data: d, version: 1 });
+      if (!error) { this.meta.binders[b.id] = { v: 1, sig, base: baseOf(d) }; delete b.editedAt; return; }
+      if (error.code !== '23505') throw error;
+    } else {
+      const nv = m.v + 1;
+      const { data: rows, error } = await this.sb.from('binders').update({ data: d, version: nv, deleted: false }).eq('id', b.id).eq('version', m.v).select('version');
+      if (error) throw error;
+      if (rows.length) { this.meta.binders[b.id] = { v: nv, sig, base: baseOf(d) }; delete b.editedAt; return; }
+    }
+    // Someone else changed it first: merge with their version and try again.
+    if (tries > 3) throw new Error('sync conflict');
+    const { data: row, error } = await this.sb.from('binders').select('data,version,updated_at').eq('id', b.id).single();
+    if (error) throw error;
+    Object.assign(b, mergeBinder(b, row.data, row.updated_at, m ? m.base : baseOf({ items: [], sections: {} })));
+    this.meta.binders[b.id] = { v: row.version, sig: dataSig(row.data), base: baseOf(row.data) };
+    saveLocal(); render();
+    return this.pushBinder(b, tries + 1);
+  },
+  async pushAccount(tries = 0) {
+    const payload = { members: store.members || [], inserts: ins };
+    const sig = hashStr(JSON.stringify([payload.members, ins.slots])), m = this.meta.account;
+    if (m && m.sig === sig) return;
+    if (!m) {
+      const { error } = await this.sb.from('account_data').insert(payload);
+      if (!error) { this.meta.account = { v: 1, sig }; return; }
+      if (error.code !== '23505') throw error;
+    } else {
+      const { data: rows, error } = await this.sb.from('account_data').update({ ...payload, version: m.v + 1 }).eq('version', m.v).select('version');
+      if (error) throw error;
+      if (rows.length) { this.meta.account = { v: m.v + 1, sig }; return; }
+    }
+    if (tries > 3) throw new Error('sync conflict');
+    const { data: acc } = await this.sb.from('account_data').select('members,inserts,version').single();
+    const mem = new Map((acc.members || []).map(x => [x.id, x])); (store.members || []).forEach(x => mem.set(x.id, x));
+    store.members = [...mem.values()]; saveLocal();
+    this.meta.account = { v: acc.version, sig: 'merge' };
+    return this.pushAccount(tries + 1);
+  },
+  async pushPictures() {
+    for (const [id, what] of Object.entries(this.meta.pics)) {
+      const path = `${this.user.id}/${id}.jpg`;
+      if (what === 'up') {
+        const url = await imgDB.get(id);
+        if (url) {
+          const blob = await (await fetch(url)).blob();
+          const { error } = await this.sb.storage.from(PIC_BUCKET).upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+          if (error) throw error;
+        }
+      } else if (what === 'del') {
+        await this.sb.storage.from(PIC_BUCKET).remove([path]);
+      }
+      delete this.meta.pics[id];
+    }
+  },
+  pictureChanged(id, removed) { if (!this.user) return; this.meta.pics[id] = removed ? 'del' : 'up'; this.saveMeta(); this.schedule(); },
+  binderDeleted(id) { if (!this.user) return; if (this.meta.binders[id]) { this.meta.tomb.push(id); this.saveMeta(); } this.schedule(); },
+  pending() { return !!(this.meta.tomb?.length || Object.keys(this.meta.pics || {}).length || store.binders.some(b => { const m = this.meta.binders?.[b.id]; return !m || m.sig !== dataSig(binderData(b)); })); },
+
+  /* ---- sign in / out ---- */
+  async sendCode(email) {
+    const sb = await this.load(); if (!sb) throw new Error('Can’t reach the sign-in service. Check your internet.');
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    if (error) throw error;
+  },
+  async verify(email, token) {
+    const { error } = await this.sb.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+  },
+  async signOut() {
+    clearTimeout(this.timer);
+    if (navigator.onLine) await this.push();
+    await this.sb.auth.signOut();
+    // Leave nothing from this account on a shared device.
+    for (const s of ins.slots) await imgDB.del(s.id);
+    try { [LS_KEY, INS_KEY, SYNC_KEY].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    location.replace(location.pathname + '#home'); location.reload();
+  },
+  async versions(id) {
+    const { data, error } = await this.sb.from('binder_versions').select('vid,saved_at').eq('binder_id', id).order('saved_at', { ascending: false }).limit(30);
+    if (error) throw error; return data;
+  },
+  async versionData(vid) {
+    const { data, error } = await this.sb.from('binder_versions').select('data').eq('vid', vid).single();
+    if (error) throw error; return data.data;
+  },
+};
+window.addEventListener('online', () => Sync.push());
+window.addEventListener('offline', () => Sync.user && Sync.setStatus('offline'));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Sync.user) Sync.pull(); });
+
+/* ---------------- account & family UI ---------------- */
+function paintAccount() {
+  const el = $('#acct'); if (!el) return;
+  if (!Sync.user) { el.innerHTML = 'Sign in'; el.className = 'acct'; el.title = 'Sign in to save your binders and use them on any device'; return; }
+  const label = { ok: 'Saved', saving: 'Saving…', syncing: 'Syncing…', offline: 'Offline', error: 'Not saved', off: '' }[Sync.status] || '';
+  el.className = 'acct in ' + Sync.status;
+  el.innerHTML = `<i class="dot"></i>${label}`;
+  el.title = Sync.user.email;
+}
+function openAccount() {
+  if (!Sync.user) return openSignIn();
+  const pend = Sync.pending();
+  const m = openModal(`<div class="mhead"><h2>Your account</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="box">
+      <div><b>${esc(Sync.user.email)}</b><br><span class="small muted">${Sync.status === 'ok' ? 'Everything is saved to your account.' : Sync.status === 'offline' ? 'You’re offline. Changes are kept here and upload when you’re back online.' : Sync.status === 'error' ? 'Some changes haven’t uploaded yet. They’re safe on this device and will retry.' : 'Saving…'}</span></div>
+      <p class="small muted" style="margin:0">Sign in with the same email on any phone, tablet or computer to see the same binders.</p>
+    </div>
+    ${familyBoxHTML()}
+    <div class="mfoot"><button class="btn danger" id="aOut">Sign out</button><button class="btn primary" data-close>Done</button></div>`);
+  wireFamily(m);
+  $('#aOut', m).onclick = () => {
+    const go = () => Sync.signOut();
+    if (pend && !navigator.onLine) return confirmBox('Sign out while offline?', 'Some changes haven’t uploaded yet and will be lost from this device.', 'Sign out anyway', go);
+    confirmBox('Sign out?', 'Your binders stay safe in your account. This device will be cleared until you sign in again.', 'Sign out', go);
+  };
+}
+function openSignIn() {
+  const m = openModal(`<div class="mhead"><h2>Sign in</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="box" id="siBox">
+      <p class="muted" style="margin:0">Save your binders to your account and use them on any device. One account for the whole family.</p>
+      <form id="siForm" class="field" style="margin:0"><span>Grown-up’s email</span>
+        <input class="inp" id="siEmail" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com">
+        <button class="btn primary" id="siSend">Email me a code</button></form>
+    </div>
+    <p class="small muted">No password needed. ${store.binders.length ? 'The binders on this device are added to your account.' : ''}</p>`);
+  setTimeout(() => $('#siEmail', m)?.focus(), 50);
+  Sync.load();
+  $('#siForm', m).onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#siEmail', m).value.trim(), btn = $('#siSend', m);
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try { await Sync.sendCode(email); }
+    catch (err) { btn.disabled = false; btn.textContent = 'Email me a code'; return toast(/rate|seconds/i.test(err.message) ? 'Please wait a minute before asking for another code.' : (err.message || 'That didn’t work. Try again.')); }
+    $('#siBox', m).innerHTML = `<p style="margin:0">We emailed a 6-digit code to <b>${esc(email)}</b>. It can take a minute.</p>
+      <form id="siCodeForm" class="field" style="margin:0"><span>Code</span>
+        <input class="inp code" id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
+        <button class="btn primary" id="siGo">Sign in</button></form>
+      <p class="small muted" style="margin:0">Got a link instead of a code? Open it on this device and you’ll be signed in.</p>`;
+    $('#siCode', m).focus();
+    $('#siCodeForm', m).onsubmit = async ev => {
+      ev.preventDefault();
+      const code = $('#siCode', m).value.replace(/\D/g, ''), go = $('#siGo', m);
+      if (code.length < 6) return toast('Type the 6-digit code from the email.');
+      go.disabled = true; go.textContent = 'Checking…';
+      try { await Sync.verify(email, code); closeModal(); toast('Signed in. Your binders are saving to your account.'); }
+      catch (err) { go.disabled = false; go.textContent = 'Sign in'; toast('That code didn’t work. Check it, or ask for a new one.'); }
+    };
+  };
+}
+
+/* family members (profiles) */
+const memberName = id => (store.members || []).find(x => x.id === id)?.name;
+function familyBoxHTML() {
+  const ms = store.members || [];
+  return `<div class="box" id="famBox"><h2 style="font-size:18px">Family</h2>
+    <p class="small muted" style="margin:0">Add names so each binder can belong to someone. Kids don’t need their own email.</p>
+    <div class="blist">${ms.map(x => `<div class="brow"><input class="inp" data-mname="${x.id}" value="${esc(x.name)}" maxlength="24" aria-label="Name"><button class="icon-btn" data-mdel="${x.id}" aria-label="Remove ${esc(x.name)}" style="color:var(--need)">✕</button></div>`).join('')}</div>
+    <form id="famAdd" style="display:flex;gap:8px"><input class="inp" id="famNew" maxlength="24" placeholder="Name, e.g. Josie"><button class="btn">Add</button></form></div>`;
+}
+function wireFamily(m) {
+  const box = $('#famBox', m); if (!box) return;
+  const redraw = () => { box.outerHTML = familyBoxHTML(); wireFamily(m); };
+  $('#famAdd', box).onsubmit = e => { e.preventDefault(); const n = $('#famNew', box).value.trim(); if (!n) return; (store.members ||= []).push({ id: uid(), name: n }); commit(); redraw(); $('#famNew', m)?.focus(); };
+  $$('[data-mname]', box).forEach(i => i.onchange = () => { const x = store.members.find(y => y.id === i.dataset.mname); if (x) { x.name = i.value.trim() || x.name; commit(); } });
+  $$('[data-mdel]', box).forEach(b => b.onclick = () => {
+    const id = b.dataset.mdel;
+    store.members = store.members.filter(x => x.id !== id);
+    store.binders.forEach(x => { if (x.member === id) x.member = null; });
+    commit(); redraw();
+  });
+}
+function openFamily() {
+  const m = openModal(`<div class="mhead"><h2>Family</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>${familyBoxHTML()}<div class="mfoot"><button class="btn primary" data-close>Done</button></div>`);
+  wireFamily(m);
+}
+$('#acct').onclick = () => openAccount();
+paintAccount();
+if (Sync.hasStoredSession() || /[?&]code=/.test(location.search)) Sync.load();
 
 /* ---------------- light / dark ---------------- */
 const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
@@ -1442,7 +1852,7 @@ $('#tabs').addEventListener('click', e => {
 $('#main').addEventListener('click', e => {
   if (DRAG.justDropped || tab === 'inserts') return;
   const b = cur(), t = e.target.closest('button, [data-i]'); if (!t) return;
-  if (!b && !t.dataset.act && !t.dataset.open) return;
+  if (!b && !t.dataset.act && !t.dataset.open && t.dataset.who === undefined) return;
   const d = t.dataset;
   if (d.i !== undefined) {
     const it = b.items[+d.i];
@@ -1453,6 +1863,16 @@ $('#main').addEventListener('click', e => {
   if (d.act === 'add') return openAdd();
   if (d.act === 'create') return openCreate();
   if (d.act === 'inserts') return go('inserts');
+  if (d.act === 'family') return openFamily();
+  if (d.act === 'signin') return openSignIn();
+  if (d.who !== undefined) { store.who = d.who; return commit(); }
+  if (d.sw !== undefined) { b.member = d.sw || null; return commit(); }
+  if (d.restore) {
+    return confirmBox('Restore this version?', 'Your binder goes back to how it was then. You can restore the current one again later from this list.', 'Restore', async () => {
+      try { const data = await Sync.versionData(+d.restore); const keep = b.id; Object.assign(b, data, { id: keep, editedAt: Date.now() }); commit('Restored'); }
+      catch (e) { toast('Couldn’t restore. Check your internet.'); }
+    });
+  }
   if (d.act === 'showall') { store.showAll = true; return commit(); }
   if (d.act === 'showless') { store.showAll = false; return commit(); }
   if (d.tap) { store.tapMode = d.tap; return commit(); }
@@ -1486,6 +1906,7 @@ $('#main').addEventListener('click', e => {
     const x = store.binders.find(y => y.id === d.delb);
     return confirmBox('Delete binder?', `Delete <b>${esc(x.name)}</b> and its whole plan? This can't be undone.`, 'Delete', () => {
       store.binders = store.binders.filter(y => y.id !== d.delb);
+      Sync.binderDeleted(d.delb);
       if (store.cur === d.delb) store.cur = null;
       save(); go('home'); toast('Binder deleted');
     });
