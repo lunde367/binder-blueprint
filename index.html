@@ -7,7 +7,7 @@
 <meta name="description" content="Plan your real trading card binder before you sleeve a single card.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Fredoka:wght@600&family=Bangers&family=Permanent+Marker&family=Playfair+Display:wght@800&family=Press+Start+2P&display=swap">
 <meta name="theme-color" content="#EEF2F4">
 <script>try{var t=localStorage.getItem('binderBlueprint.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
@@ -298,6 +298,8 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;background:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 10px;border-radius:999px;min-height:34px}
+.fontchips button{font-size:16px;padding:6px 14px}
+.fontchips button[data-f=pixel]{font-size:10px}
 .chips button i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
 .chips button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
@@ -1339,6 +1341,10 @@ const SET_BORDERS = [
   ['Prismatic Evolutions', '#B57BFF'], ['Surging Sparks', '#F4C21B'], ['151', '#E3350D'],
 ];
 const BG_COLORS = ['#1B2B33', '#2F6FDB', '#E63946', '#2A9D8F', '#8E5CF7', '#F2B705', '#FF7AB6', '#FFFFFF'];
+// Title fonts for inserts: [label, CSS family, weight]
+const INS_FONTS = { bold: ['Bold', '"Bricolage Grotesque"', 800], round: ['Round', 'Fredoka', 600], comic: ['Comic', 'Bangers', 400], marker: ['Marker', '"Permanent Marker"', 400], fancy: ['Fancy', '"Playfair Display"', 800], pixel: ['Pixel', '"Press Start 2P"', 400] };
+const insFont = slot => INS_FONTS[slot.font] || INS_FONTS.bold;
+const fontReady = slot => { const [, fam, w] = insFont(slot); try { return document.fonts.load(`${w} 40px ${fam}`).catch(() => {}); } catch (e) { return Promise.resolve(); } };
 const blankSlot = () => ({ id: uid(), hasImg: false, x: 0, y: 0, z: 1, rot: 0, text: '', textPos: 'bottom', bg: '#1B2B33', border: '' });
 let ins = (() => {
   try { const d = JSON.parse(localStorage.getItem(INS_KEY)); if (d && Array.isArray(d.slots) && d.slots.length === 9) return d; } catch (e) {}
@@ -1415,10 +1421,10 @@ function drawInsert(ctx, slot, W, H, img) {
   const text = (slot.text || '').trim();
   if (text) {
     const maxW = W - bw * 2 - W * 0.12;
-    let size = W * 0.13, lines;
-    const fam = getComputedStyle(document.documentElement).getPropertyValue('--display') || 'sans-serif';
+    let size = W * 0.13 * (slot.tsize || 1), lines;
+    const [, fam, weight] = insFont(slot);
     for (;;) {   // wrap into at most 3 lines, shrinking until it fits
-      ctx.font = `800 ${size}px ${fam}`;
+      ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
       lines = []; let line = '';
       for (const w of text.split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
       lines.push(line);
@@ -1440,7 +1446,7 @@ function drawInsert(ctx, slot, W, H, img) {
   ctx.restore();
 }
 async function paintSlotCanvas(canvas, slot) {
-  const img = await slotImage(slot);
+  const [img] = await Promise.all([slotImage(slot), fontReady(slot)]);
   drawInsert(canvas.getContext('2d'), slot, canvas.width, canvas.height, img);
 }
 const slotEmpty = s => !s.hasImg && !(s.text || '').trim();
@@ -1493,6 +1499,8 @@ function openInsertEditor(k) {
       <div class="ins-controls">
         <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
           <button class="btn sm" id="ieUseSet" hidden></button></div>
+        <div class="field"><span>Font</span><div class="chips fontchips" id="ieFont">${Object.entries(INS_FONTS).map(([k, [n, f, w]]) => `<button data-f="${k}" class="${(slot.font || 'bold') === k ? 'on' : ''}" style="font-family:${f.replace(/"/g, "'")};font-weight:${w}">${n}</button>`).join('')}</div></div>
+        <label class="field"><span>Text size</span><input type="range" id="ieSize" min="0.5" max="1.6" step="0.05" value="${slot.tsize || 1}"></label>
         <div class="field"><span>Title position</span><div class="seg" id="iePos">${['top', 'middle', 'bottom'].map(p => `<button data-p="${p}" class="${slot.textPos === p ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div></div>
         <div class="field"><span>Border</span>
           <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
@@ -1520,6 +1528,8 @@ function openInsertEditor(k) {
   $('#ieText', m).oninput = e => { slot.text = e.target.value; offerSet(); changed(); };
   $('#ieText', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
   offerSet();
+  $$('#ieFont button', m).forEach(b => b.onclick = () => { slot.font = b.dataset.f; $$('#ieFont button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $('#ieSize', m).oninput = e => { slot.tsize = +e.target.value; changed(); };
   $$('#iePos button', m).forEach(b => b.onclick = () => { slot.textPos = b.dataset.p; $$('#iePos button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieBorder button', m).forEach(b => b.onclick = () => {
     slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b));
@@ -1562,6 +1572,7 @@ async function printInserts() {
   const urls = [];
   for (const s of filled) {
     const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
+    await fontReady(s);
     drawInsert(c.getContext('2d'), s, CARD_W, CARD_H, await slotImage(s));
     urls.push(c.toDataURL('image/jpeg', 0.92));
   }
