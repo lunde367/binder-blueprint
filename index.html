@@ -1419,30 +1419,133 @@ const DECOS = {
   crown: ['Crown', 'M2.5 7.5l5 4.5L12 4l4.5 8 5-4.5-2 12h-15z'],
   moon: ['Moon', 'M20.5 15.2A9 9 0 1 1 8.8 3.5a7.3 7.3 0 0 0 11.7 11.7z'],
 };
-const PATTERNS = { '': 'None', stripes: 'Stripes', dots: 'Dots', burst: 'Sunburst', sparkles: 'Sparkles', fade: 'Fade' };
+const PATTERNS = { '': 'None', holo: 'Holo foil', stars: 'Starfield', halftone: 'Halftone', burst: 'Sunburst', speed: 'Speed lines', waves: 'Waves', diamonds: 'Diamonds', stripes: 'Stripes', glow: 'Glow' };
+const PATTERN_ALIAS = { dots: 'halftone', sparkles: 'stars', fade: 'glow' };   // older cards
+const TEXT_STYLES = { pop: 'Pop', '3d': '3D', neon: 'Neon', banner: 'Banner', clean: 'Clean' };
+const HOLO = 'holo';
 const seeded = seed => { let x = [...String(seed)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) || 1; return () => (x = (x * 1103515245 + 12345) >>> 0) / 4294967296; };
-function drawShape(ctx, key, cx, cy, size, rot = 0) {
+const hexRGB = h => { const n = parseInt((h || '#000000').slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+const shade = (h, t) => '#' + hexRGB(h).map(v => Math.round(t > 0 ? v + (255 - v) * t : v * (1 + t))).map(v => v.toString(16).padStart(2, '0')).join('');   // t: -1 darker … +1 lighter
+const rgba = (h, a) => `rgba(${hexRGB(h).join(',')},${a})`;
+const isLight = h => h && h !== HOLO && luminance(h) > 0.6;
+function holoGradient(ctx, x0, y0, x1, y1, a = 1) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  ['#FF6B6B', '#FFD36B', '#8CF5A8', '#6BD8FF', '#B48CFF', '#FF8CE0', '#FF6B6B'].forEach((c, i, arr) => g.addColorStop(i / (arr.length - 1), rgba(c, a)));
+  return g;
+}
+function drawShape(ctx, key, cx, cy, size, rot = 0, opt = {}) {
   const d = DECOS[key]; if (!d) return;
+  const path = new Path2D(d[1]), col = opt.color || '#FFFFFF';
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(size / 24, size / 24); ctx.translate(-12, -12);
-  ctx.fill(new Path2D(d[1])); ctx.restore();
+  if (opt.flat) { ctx.fillStyle = col; ctx.fill(path); ctx.restore(); return; }
+  if (opt.glow) { ctx.shadowColor = rgba(opt.glow, 0.85); ctx.shadowBlur = 10; }
+  else { ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 2.5; ctx.shadowOffsetY = 1.2; }
+  if (col === HOLO) ctx.fillStyle = holoGradient(ctx, 0, 0, 24, 24);
+  else { const g = ctx.createLinearGradient(0, 2, 0, 22); g.addColorStop(0, shade(col, 0.45)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.25)); ctx.fillStyle = g; }
+  ctx.fill(path);
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 1.9; ctx.lineJoin = 'round'; ctx.strokeStyle = opt.outline || 'rgba(0,0,0,.6)'; ctx.stroke(path);
+  ctx.globalAlpha = 0.5; ctx.lineWidth = 0.7; ctx.strokeStyle = '#fff'; ctx.translate(0, -0.6); ctx.stroke(path);   // little shine on top edge
+  ctx.restore();
+}
+function drawBackground(ctx, slot, W, H) {
+  const bg = slot.bg || '#1B2B33';
+  const g = ctx.createRadialGradient(W / 2, H * 0.38, W * 0.05, W / 2, H * 0.45, H * 0.85);
+  g.addColorStop(0, shade(bg, isLight(bg) ? 0.5 : 0.22)); g.addColorStop(1, shade(bg, isLight(bg) ? -0.1 : -0.35));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 function drawPattern(ctx, slot, W, H) {
-  const p = slot.pattern; if (!p) return;
-  const light = luminance(slot.bg || '#000') > 0.6;
-  const ink = light ? 'rgba(0,0,0,.09)' : 'rgba(255,255,255,.11)';
-  ctx.save(); ctx.fillStyle = ink; ctx.strokeStyle = ink;
-  if (p === 'stripes') { ctx.lineWidth = W * 0.035; for (let x = -H; x < W + H; x += W * 0.1) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H, H); ctx.stroke(); } }
-  if (p === 'dots') { const g = W * 0.08; for (let y = g / 2, r = 0; y < H; y += g, r++) for (let x = (r % 2 ? g : g / 2); x < W; x += g) { ctx.beginPath(); ctx.arc(x, y, W * 0.014, 0, 7); ctx.fill(); } }
-  if (p === 'burst') { const n = 24, R = Math.hypot(W, H); for (let k = 0; k < n; k += 2) { const a1 = k / n * 2 * Math.PI, a2 = (k + 1) / n * 2 * Math.PI; ctx.beginPath(); ctx.moveTo(W / 2, H / 2); ctx.lineTo(W / 2 + R * Math.cos(a1), H / 2 + R * Math.sin(a1)); ctx.lineTo(W / 2 + R * Math.cos(a2), H / 2 + R * Math.sin(a2)); ctx.fill(); } }
-  if (p === 'sparkles') { const rnd = seeded(slot.id + 'p'); for (let k = 0; k < 22; k++) drawShape(ctx, 'sparkle', rnd() * W, rnd() * H, W * (0.03 + rnd() * 0.06)); }
-  if (p === 'fade') { const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, light ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,.18)'); gr.addColorStop(1, light ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.45)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H); }
+  const p = PATTERN_ALIAS[slot.pattern] || slot.pattern; if (!p) return;
+  const bg = slot.bg || '#1B2B33', light = isLight(bg);
+  const ink = a => light ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`;
+  const rnd = seeded(slot.id + p);
+  ctx.save();
+  if (p === 'holo') {
+    if (light) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = holoGradient(ctx, 0, 0, W, H, 0.55); }
+    else { ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = holoGradient(ctx, 0, 0, W, H, 0.5); }
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    for (let k = -2; k < 6; k++) {   // diagonal light streaks
+      const x = k * W * 0.32 + rnd() * W * 0.1, w = W * (0.05 + rnd() * 0.12);
+      const g = ctx.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.22)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w - H * 0.5, H); ctx.lineTo(x - H * 0.5, H); ctx.fill();
+    }
+  }
+  if (p === 'stars') {
+    for (let k = 0; k < 90; k++) { ctx.fillStyle = ink(0.15 + rnd() * 0.45); ctx.beginPath(); ctx.arc(rnd() * W, rnd() * H, W * (0.002 + rnd() * 0.005), 0, 7); ctx.fill(); }
+    ctx.shadowColor = light ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.9)'; ctx.shadowBlur = W * 0.03;
+    for (let k = 0; k < 14; k++) drawShape(ctx, 'sparkle', rnd() * W, rnd() * H, W * (0.03 + rnd() * 0.07), 0, { flat: true, color: light ? '#15232B' : '#FFFFFF' });
+  }
+  if (p === 'halftone') {
+    const g = W * 0.055;
+    for (let y = 0, r = 0; y < H + g; y += g * 0.87, r++) for (let x = (r % 2) * g / 2; x < W + g; x += g) {
+      const t = Math.min(1, Math.hypot(x, y) / Math.hypot(W, H)) ** 1.3;
+      ctx.fillStyle = ink(0.16); ctx.beginPath(); ctx.arc(x, y, g * 0.48 * t, 0, 7); ctx.fill();
+    }
+  }
+  if (p === 'burst') {
+    const n = 28, R = Math.hypot(W, H), cx = W / 2, cy = H * 0.42;
+    ctx.fillStyle = ink(0.13);
+    for (let k = 0; k < n; k += 2) { const a1 = k / n * 2 * Math.PI, a2 = (k + 1) / n * 2 * Math.PI; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * Math.cos(a1), cy + R * Math.sin(a1)); ctx.lineTo(cx + R * Math.cos(a2), cy + R * Math.sin(a2)); ctx.fill(); }
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.6); g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  if (p === 'speed') {
+    const cx = W / 2, cy = H / 2, R = Math.hypot(W, H);
+    for (let k = 0; k < 70; k++) {
+      const a = rnd() * Math.PI * 2, w = 0.004 + rnd() * 0.012, r0 = W * (0.32 + rnd() * 0.25);
+      ctx.fillStyle = ink(0.12 + rnd() * 0.2); ctx.beginPath();
+      ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a));
+      ctx.lineTo(cx + R * Math.cos(a - w), cy + R * Math.sin(a - w)); ctx.lineTo(cx + R * Math.cos(a + w), cy + R * Math.sin(a + w)); ctx.fill();
+    }
+  }
+  if (p === 'waves') {
+    ctx.lineWidth = W * 0.018;
+    for (let y = -H * 0.1, k = 0; y < H * 1.1; y += H * 0.07, k++) {
+      ctx.strokeStyle = ink(k % 2 ? 0.08 : 0.16); ctx.beginPath();
+      for (let x = 0; x <= W; x += W / 40) ctx.lineTo(x, y + Math.sin(x / W * Math.PI * 3 + k * 0.6) * H * 0.025);
+      ctx.stroke();
+    }
+  }
+  if (p === 'diamonds') {
+    const dw = W / 5, dh = dw * 1.4;
+    for (let y = 0, r = 0; y < H + dh; y += dh / 2, r++) for (let x = (r % 2) * dw / 2; x < W + dw; x += dw) {
+      ctx.fillStyle = ink((r + Math.round(x / dw)) % 2 ? 0.07 : 0.14);
+      ctx.beginPath(); ctx.moveTo(x, y - dh / 2); ctx.lineTo(x + dw / 2, y); ctx.lineTo(x, y + dh / 2); ctx.lineTo(x - dw / 2, y); ctx.fill();
+    }
+    ctx.strokeStyle = ink(0.12); ctx.lineWidth = W * 0.004; ctx.setLineDash([W * 0.015, W * 0.015]);
+    for (let x = -H; x < W + H; x += dw) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H * dw / dh * 0.5 * 2, H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + H * dw / dh, 0); ctx.lineTo(x - H * dw / dh + H * dw / dh, H); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  if (p === 'stripes') {
+    ctx.lineWidth = W * 0.05;
+    for (let x = -H, k = 0; x < W + H; x += W * 0.13, k++) { ctx.strokeStyle = ink(k % 3 === 0 ? 0.16 : 0.07); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H, H); ctx.stroke(); }
+  }
+  if (p === 'glow') {
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.75); g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+}
+function drawBorder(ctx, slot, W, H, bw) {
+  if (!slot.border) return;
+  ctx.save();
+  ctx.lineWidth = bw;
+  ctx.strokeStyle = slot.border === HOLO ? holoGradient(ctx, 0, 0, W, H)
+    : (() => { const g = ctx.createLinearGradient(0, 0, W, H); [[0, 0.35], [0.3, 0], [0.5, 0.25], [0.7, -0.15], [1, 0.2]].forEach(([o, t]) => g.addColorStop(o, shade(slot.border, t))); return g; })();
+  ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw);
+  // inner highlight line + soft inner shadow
+  ctx.lineWidth = Math.max(1, W * 0.006); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.strokeRect(bw + W * 0.008, bw + W * 0.008, W - 2 * bw - W * 0.016, H - 2 * bw - W * 0.016);
+  ctx.lineWidth = Math.max(1, W * 0.004); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.strokeRect(bw * 0.15, bw * 0.15, W - bw * 0.3, H - bw * 0.3);
   ctx.restore();
 }
 
 /* Draw one insert onto a canvas of any size. */
 function drawInsert(ctx, slot, W, H, img) {
   ctx.save();
-  ctx.fillStyle = slot.bg || '#1B2B33'; ctx.fillRect(0, 0, W, H);
+  drawBackground(ctx, slot, W, H);
   drawPattern(ctx, slot, W, H);
   if (img) {
     const rot = ((slot.rot % 360) + 360) % 360, side = rot % 180 !== 0;
@@ -1455,13 +1558,14 @@ function drawInsert(ctx, slot, W, H, img) {
     ctx.restore();
   }
   const bw = slot.border ? W * 0.055 : 0;
+  const style = slot.tstyle || 'pop';
   // lay out the title first, so decorations can sit around it
   const text = (slot.text || '').trim();
   let lines = [], size = 0, lh = 0, top = H / 2, blockH = 0;
   const [, fam, weight] = insFont(slot);
   if (text) {
-    const maxW = W - bw * 2 - W * 0.12;
-    size = W * 0.13 * (slot.tsize || 1);
+    const maxW = W - bw * 2 - W * (style === 'banner' ? 0.22 : 0.14);
+    size = W * (text.length <= 8 ? 0.19 : 0.16) * (slot.tsize || 1);
     for (;;) {   // wrap into at most 3 lines, shrinking until it fits
       ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
       lines = []; let line = '';
@@ -1471,47 +1575,83 @@ function drawInsert(ctx, slot, W, H, img) {
       size *= 0.92;
     }
     lh = size * 1.12; blockH = lines.length * lh;
-    const pad = bw + H * 0.05;
+    const pad = bw + H * 0.06;
     top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
   }
-  const decoColor = slot.border || (img ? '#FFFFFF' : luminance(slot.bg || '#000') > 0.6 ? '#15232B' : '#FFFFFF');
+  const bgLight = !img && isLight(slot.bg);
+  const accent = slot.border && slot.border !== HOLO ? slot.border : null;
+  const decoColor = slot.border === HOLO ? HOLO : accent || (bgLight ? '#15232B' : '#FFFFFF');
+  const decoOpt = { color: decoColor, outline: bgLight && !accent ? 'rgba(255,255,255,.6)' : 'rgba(0,0,0,.55)' };
   if (slot.deco && slot.decoPlace === 'scatter') {
-    ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = decoColor;
+    ctx.save(); ctx.globalAlpha = 0.55;
     const rnd = seeded(slot.id + slot.deco);
     const t0 = top - size * 0.5 - W * 0.06, t1 = top + blockH + W * 0.06;   // keep clear of the title
     for (let k = 0, tries = 0; k < 9 && tries < 200; tries++) {
       const sz = W * (0.07 + rnd() * 0.08), x = bw + W * 0.08 + rnd() * (W - bw * 2 - W * 0.16), y = bw + H * 0.06 + rnd() * (H - bw * 2 - H * 0.12), r = (rnd() - 0.5) * 0.8;
       if (text && y + sz / 2 > t0 && y - sz / 2 < t1) continue;
-      drawShape(ctx, slot.deco, x, y, sz, r); k++;
+      drawShape(ctx, slot.deco, x, y, sz, r, decoOpt); k++;
     }
     ctx.restore();
   }
-  if (slot.border) { ctx.lineWidth = bw; ctx.strokeStyle = slot.border; ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw); }
-  if (text) {
-    let color = luminance(slot.bg || '#000') > 0.6 ? '#15232B' : '#FFFFFF';
-    if (img) {
-      ctx.fillStyle = 'rgba(10,16,20,.55)';
-      ctx.fillRect(bw, top - size * 0.35, W - bw * 2, blockH + size * 0.5);
-      color = '#FFFFFF';
-    }
-    ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
-    ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    lines.forEach((l, k) => ctx.fillText(l, W / 2, top + k * lh));
-  }
+  drawBorder(ctx, slot, W, H, bw);
   if (slot.deco && slot.decoPlace !== 'scatter') {
-    ctx.save(); ctx.fillStyle = decoColor;
-    if (img) { ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = W * 0.02; }
     if (slot.decoPlace === 'above') {
-      const S = W * 0.3, gap = H * 0.03;
-      let cy = !text ? H / 2 : slot.textPos === 'top' ? top + blockH + gap + S / 2 : top - gap - S / 2;
+      const S = W * 0.36, gap = H * 0.035;
+      let cy = !text ? H / 2 : slot.textPos === 'top' ? top + blockH + gap + S / 2 : top - gap - S / 2 - (style === 'banner' ? size * 0.3 : 0);
       cy = Math.max(bw + S / 2 + H * 0.03, Math.min(H - bw - S / 2 - H * 0.03, cy));
-      drawShape(ctx, slot.deco, W / 2, cy, S);
-    } else {   // corners
-      const S = W * 0.12, o = bw + W * 0.05 + S / 2;
-      [[o, o], [W - o, o], [o, H - o], [W - o, H - o]].forEach(([x, y]) => drawShape(ctx, slot.deco, x, y, S));
+      const halo = ctx.createRadialGradient(W / 2, cy, 0, W / 2, cy, S);   // soft halo behind it
+      halo.addColorStop(0, decoColor === HOLO ? 'rgba(255,255,255,.55)' : rgba(bgLight ? '#FFFFFF' : decoColor, 0.45)); halo.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = halo; ctx.fillRect(W / 2 - S, cy - S, S * 2, S * 2);
+      drawShape(ctx, slot.deco, W / 2, cy, S, 0, { ...decoOpt, glow: bgLight ? null : '#FFFFFF' });
+    } else {   // corners, tilted outward
+      const S = W * 0.15, o = bw + W * 0.05 + S / 2;
+      [[o, o, -0.25], [W - o, o, 0.25], [o, H - o, 0.25], [W - o, H - o, -0.25]].forEach(([x, y, r]) => drawShape(ctx, slot.deco, x, y, S, r, decoOpt));
     }
-    ctx.restore();
   }
+  if (text) {
+    ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineJoin = 'round';
+    const fill = bgLight && style !== 'banner' ? '#15232B' : '#FFFFFF';
+    const edge = fill === '#FFFFFF' ? '#0E171C' : '#FFFFFF';
+    const each = fn => lines.forEach((l, k) => fn(l, W / 2, top + k * lh));
+    if (style === 'clean' && img) { ctx.fillStyle = 'rgba(10,16,20,.55)'; ctx.fillRect(bw, top - size * 0.35, W - bw * 2, blockH + size * 0.5); }
+    if (style === 'banner') {
+      const wMax = Math.max(...lines.map(l => ctx.measureText(l).width)) + size * 1.1;
+      const y0 = top - size * 0.3, h = blockH + size * 0.45, x0 = W / 2 - wMax / 2, n = size * 0.45, col = accent || (slot.bg && slot.bg !== '#FFFFFF' ? shade(slot.bg, isLight(slot.bg) ? -0.55 : -0.4) : '#15232B');
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = size * 0.4; ctx.shadowOffsetY = size * 0.1;
+      ctx.fillStyle = shade(col, -0.35);   // ribbon tails
+      [[x0 - n * 1.4, x0 + n * 0.4], [x0 + wMax + n * 1.4, x0 + wMax - n * 0.4]].forEach(([tip, base]) => { ctx.beginPath(); ctx.moveTo(base, y0 + n * 0.5); ctx.lineTo(tip, y0 + n * 0.5); ctx.lineTo(tip + (tip < base ? n * 0.6 : -n * 0.6), y0 + n * 0.5 + h / 2); ctx.lineTo(tip, y0 + h + n * 0.5); ctx.lineTo(base, y0 + h + n * 0.5); ctx.fill(); });
+      const g = ctx.createLinearGradient(0, y0, 0, y0 + h); g.addColorStop(0, shade(col, 0.25)); g.addColorStop(1, shade(col, -0.15));
+      ctx.fillStyle = g; ctx.fillRect(x0, y0, wMax, h);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = Math.max(1, size * 0.04); ctx.strokeRect(x0 + size * 0.12, y0 + size * 0.12, wMax - size * 0.24, h - size * 0.24);
+      ctx.fillStyle = '#FFFFFF'; each((l, x, y) => ctx.fillText(l, x, y));
+    } else if (style === '3d') {
+      const depth = Math.max(3, Math.round(size * 0.08)), side = fill === '#FFFFFF' ? shade(accent || slot.bg || '#1B2B33', -0.55) : '#9FB0B9';
+      ctx.fillStyle = side;
+      for (let d = depth; d > 0; d--) each((l, x, y) => ctx.fillText(l, x + d * 0.7, y + d));
+      ctx.lineWidth = size * 0.1; ctx.strokeStyle = edge; each((l, x, y) => ctx.strokeText(l, x, y));
+      ctx.fillStyle = fill; each((l, x, y) => ctx.fillText(l, x, y));
+    } else if (style === 'neon') {
+      const glowC = accent || (bgLight ? '#2F6FDB' : '#7FE7FF');
+      ctx.shadowColor = glowC; ctx.shadowBlur = size * 0.6;
+      ctx.lineWidth = size * 0.08; ctx.strokeStyle = glowC; each((l, x, y) => ctx.strokeText(l, x, y));
+      ctx.shadowBlur = size * 0.25; ctx.fillStyle = bgLight ? glowC : '#FFFFFF'; each((l, x, y) => ctx.fillText(l, x, y));
+      ctx.shadowBlur = 0;
+    } else if (style === 'clean') {
+      ctx.fillStyle = img ? '#FFFFFF' : fill; each((l, x, y) => ctx.fillText(l, x, y));
+    } else {   // pop: thick outline + drop shadow
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = size * 0.15; ctx.shadowOffsetY = size * 0.08;
+      ctx.lineWidth = size * 0.16; ctx.strokeStyle = edge; each((l, x, y) => ctx.strokeText(l, x, y));
+      ctx.restore();
+      ctx.lineWidth = size * 0.16; ctx.strokeStyle = edge; each((l, x, y) => ctx.strokeText(l, x, y));
+      const g = ctx.createLinearGradient(0, top, 0, top + blockH); g.addColorStop(0, fill === '#FFFFFF' ? '#FFFFFF' : '#2A3A44'); g.addColorStop(1, fill === '#FFFFFF' ? '#E4ECEF' : '#0E171C');
+      ctx.fillStyle = g; each((l, x, y) => ctx.fillText(l, x, y));
+    }
+  }
+  const shine = ctx.createLinearGradient(0, 0, W, H);
+  shine.addColorStop(0, 'rgba(255,255,255,0)'); shine.addColorStop(0.42, 'rgba(255,255,255,0)'); shine.addColorStop(0.5, 'rgba(255,255,255,.13)'); shine.addColorStop(0.58, 'rgba(255,255,255,0)'); shine.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = shine; ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
 async function paintSlotCanvas(canvas, slot) {
@@ -1569,12 +1709,13 @@ function openInsertEditor(k) {
         <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
           <button class="btn sm" id="ieUseSet" hidden></button></div>
         <div class="field"><span>Font</span><div class="chips fontchips" id="ieFont">${Object.entries(INS_FONTS).map(([k, [n, f, w]]) => `<button data-f="${k}" class="${(slot.font || 'bold') === k ? 'on' : ''}" style="font-family:${f.replace(/"/g, "'")};font-weight:${w}">${n}</button>`).join('')}</div></div>
+        <div class="field"><span>Text style</span><div class="chips" id="ieTStyle">${Object.entries(TEXT_STYLES).map(([k, n]) => `<button data-ts="${k}" class="${(slot.tstyle || 'pop') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
         <label class="field"><span>Text size</span><input type="range" id="ieSize" min="0.5" max="1.6" step="0.05" value="${slot.tsize || 1}"></label>
         <div class="field"><span>Title position</span><div class="seg" id="iePos">${['top', 'middle', 'bottom'].map(p => `<button data-p="${p}" class="${slot.textPos === p ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div></div>
         <div class="field"><span>Border</span>
-          <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
+          <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button><button data-b="holo" class="${slot.border === 'holo' ? 'on' : ''}"><i style="background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF)"></i>Holo foil</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
         <div class="field"><span>Background</span><div class="swatches" id="ieBg">${BG_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${slot.bg === c ? 'on' : ''}" aria-label="background ${c}"></button>`).join('')}</div></div>
-        <div class="field"><span>Pattern</span><div class="chips" id="iePat">${Object.entries(PATTERNS).map(([k, n]) => `<button data-pt="${k}" class="${(slot.pattern || '') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+        <div class="field"><span>Pattern</span><div class="chips" id="iePat">${Object.entries(PATTERNS).map(([k, n]) => `<button data-pt="${k}" class="${(PATTERN_ALIAS[slot.pattern] || slot.pattern || '') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
           ${slot.hasImg ? '<span class="small muted" style="text-transform:none;letter-spacing:0;font-weight:500">Patterns show behind the picture, so they’re best on cards without one.</span>' : ''}</div>
         <div class="field"><span>Decoration</span><div class="chips decochips" id="ieDeco"><button data-dc="" class="${slot.deco ? '' : 'on'}">None</button>${Object.entries(DECOS).map(([k, [n, d]]) => `<button data-dc="${k}" class="${slot.deco === k ? 'on' : ''}" aria-label="${n}" title="${n}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg></button>`).join('')}</div></div>
         <div class="field" id="iePlaceF" ${slot.deco ? '' : 'hidden'}><span>Put it</span><div class="seg" id="iePlace">${[['corners', 'In the corners'], ['above', 'One big one'], ['scatter', 'Scattered']].map(([k, n]) => `<button data-pl="${k}" class="${(slot.decoPlace || 'corners') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
@@ -1603,6 +1744,7 @@ function openInsertEditor(k) {
   offerSet();
   $$('#ieFont button', m).forEach(b => b.onclick = () => { slot.font = b.dataset.f; $$('#ieFont button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $('#ieSize', m).oninput = e => { slot.tsize = +e.target.value; changed(); };
+  $$('#ieTStyle button', m).forEach(b => b.onclick = () => { slot.tstyle = b.dataset.ts; $$('#ieTStyle button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#iePos button', m).forEach(b => b.onclick = () => { slot.textPos = b.dataset.p; $$('#iePos button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieBorder button', m).forEach(b => b.onclick = () => {
     slot.border = b.dataset.b; $$('#ieBorder button', m).forEach(x => x.classList.toggle('on', x === b));
