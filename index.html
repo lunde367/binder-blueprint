@@ -291,6 +291,8 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .ins-whole .cuts{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);pointer-events:none}
 .ins-whole .cuts i{border:0.5px dashed rgba(255,255,255,.75);outline:0.5px dashed rgba(0,0,0,.35);outline-offset:-1px;font:600 11px var(--mono);color:#fff;text-shadow:0 1px 2px #000;padding:3px 5px;font-style:normal}
 .ins-edit{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start}
+.opt{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500;opacity:.7;margin-left:4px}
+#ieRandom{align-self:flex-start}
 @media(max-width:600px){.ins-edit{grid-template-columns:1fr}.ins-edit .ins-canvas-wrap{position:sticky;top:-16px;z-index:3;background:var(--bg);padding:8px 0 10px;margin:-8px 0 0;flex-direction:row;align-items:flex-start;gap:12px;border-bottom:1px solid var(--line)}.ie-tools #ieHint{font-size:12px}.ins-edit .ins-canvas-wrap canvas{width:min(38vw,150px);flex:none}}
 .ins-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
 .ie-tools{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;width:100%}
@@ -1474,7 +1476,7 @@ function drawPattern(ctx, slot, W, H) {
   const p = PATTERN_ALIAS[slot.pattern] || slot.pattern; if (!p) return;
   const bg = slot.bg || '#1B2B33', light = isLight(bg);
   const ink = a => light ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`;
-  const rnd = seeded(slot.id + p);
+  const rnd = seeded((slot.pid || slot.id) + p);
   ctx.save();
   if (p === 'holo') {
     if (light) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = holoGradient(ctx, 0, 0, W, H, 0.55); }
@@ -1685,6 +1687,8 @@ function drawInsert(ctx, slot, W, H, img) {
   // lay out the title first, so decorations can sit around it
   const text = (slot.text || '').trim();
   let lines = [], size = 0, lh = 0, top = H / 2, blockH = 0;
+  const sub = (slot.sub || '').trim();
+  let subLines = [], subSize = 0, subGap = 0, totalH = 0;
   const [, fam, weight] = insFont(slot);
   if (text) {
     const maxW = W - bw * 2 - W * (style === 'banner' ? 0.4 : 0.14);   // banners need room for the ribbon tails
@@ -1703,8 +1707,24 @@ function drawInsert(ctx, slot, W, H, img) {
     lines = wrap(size) || wrap(size = maxFit) || [text];
     ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
     lh = size * 1.12; blockH = lines.length * lh;
+  }
+  if (sub) {   // the second line: smaller, under the title, at most 2 lines
+    const maxW = W - bw * 2 - W * 0.16;
+    subSize = text ? Math.min(Math.max(size * 0.38, W * 0.05), W * 0.08) : W * 0.09;
+    for (;;) {
+      ctx.font = `${weight} ${subSize}px ${fam}, sans-serif`;
+      subLines = []; let line = '';
+      for (const w of sub.split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { subLines.push(line); line = w; } else line = t; }
+      subLines.push(line);
+      if ((subLines.length <= 2 && subLines.every(l => ctx.measureText(l).width <= maxW)) || subSize < W * 0.03) break;
+      subSize *= 0.92;
+    }
+    subGap = text ? (style === 'banner' ? size * 0.4 : size * 0.1 + subSize * 0.25) : 0;
+  }
+  totalH = blockH + (sub ? subGap + subLines.length * subSize * 1.15 : 0);
+  if (text || sub) {
     const pad = bw + H * 0.06;
-    top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
+    top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - totalH) / 2 : H - pad - totalH;
   }
   const bgLight = !img && isLight(slot.bg);
   const accent = slot.border && slot.border !== HOLO ? slot.border : null;
@@ -1713,10 +1733,10 @@ function drawInsert(ctx, slot, W, H, img) {
   if (slot.deco && slot.decoPlace === 'scatter') {
     ctx.save(); ctx.globalAlpha = 0.55;
     const rnd = seeded(slot.id + slot.deco);
-    const t0 = top - size * 0.5 - W * 0.06, t1 = top + blockH + W * 0.06;   // keep clear of the title
+    const t0 = top - size * 0.5 - W * 0.06, t1 = top + totalH + W * 0.06;   // keep clear of the title
     for (let k = 0, tries = 0; k < 9 && tries < 200; tries++) {
       const sz = W * (0.07 + rnd() * 0.08), x = bw + W * 0.08 + rnd() * (W - bw * 2 - W * 0.16), y = bw + H * 0.06 + rnd() * (H - bw * 2 - H * 0.12), r = (rnd() - 0.5) * 0.8;
-      if (text && y + sz / 2 > t0 && y - sz / 2 < t1) continue;
+      if ((text || sub) && y + sz / 2 > t0 && y - sz / 2 < t1) continue;
       drawShape(ctx, slot.deco, x, y, sz, r, decoOpt); k++;
     }
     ctx.restore();
@@ -1725,7 +1745,7 @@ function drawInsert(ctx, slot, W, H, img) {
   if (slot.deco && slot.decoPlace !== 'scatter') {
     if (slot.decoPlace === 'above') {
       const S = W * 0.36, gap = H * 0.035;
-      let cy = !text ? H / 2 : slot.textPos === 'top' ? top + blockH + gap + S / 2 : top - gap - S / 2 - (style === 'banner' ? size * 0.3 : 0);
+      let cy = !(text || sub) ? H / 2 : slot.textPos === 'top' ? top + totalH + gap + S / 2 : top - gap - S / 2 - (style === 'banner' ? size * 0.3 : 0);
       cy = Math.max(bw + S / 2 + H * 0.03, Math.min(H - bw - S / 2 - H * 0.03, cy));
       const halo = ctx.createRadialGradient(W / 2, cy, 0, W / 2, cy, S);   // soft halo behind it
       halo.addColorStop(0, decoColor === HOLO ? 'rgba(255,255,255,.55)' : rgba(bgLight ? '#FFFFFF' : decoColor, 0.45)); halo.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1813,6 +1833,22 @@ function drawInsert(ctx, slot, W, H, img) {
       ctx.fillStyle = g; each((l, x, y) => ctx.fillText(l, x, y));
     }
   }
+  if (sub) {
+    ctx.font = `${weight} ${subSize}px ${fam}, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.lineJoin = 'round'; ctx.shadowBlur = 0;
+    const y0 = top + blockH + subGap;
+    const dark = bgLight && !['banner', 'neon', 'gold', 'glitter', 'holo'].includes(style);
+    const fillC = style === 'gold' || style === 'glitter' ? '#F7D774' : style === 'neon' ? (bgLight ? (accent || '#2F6FDB') : '#FFFFFF') : dark ? '#15232B' : '#FFFFFF';
+    const edgeC = fillC === '#15232B' ? 'rgba(255,255,255,.85)' : style === 'gold' || style === 'glitter' ? '#3A2604' : '#0E171C';
+    if (style === 'clean' && img) { ctx.fillStyle = 'rgba(10,16,20,.55)'; ctx.fillRect(bw, y0 - subSize * 0.25, W - bw * 2, subLines.length * subSize * 1.15 + subSize * 0.3); }
+    if (style === 'neon') { ctx.shadowColor = accent || (bgLight ? '#2F6FDB' : '#7FE7FF'); ctx.shadowBlur = subSize * 0.5; }
+    subLines.forEach((l, k) => {
+      const y = y0 + k * subSize * 1.15;
+      if (style !== 'clean') { ctx.lineWidth = subSize * 0.2; ctx.strokeStyle = edgeC; ctx.strokeText(l, W / 2, y); }
+      ctx.fillStyle = fillC; ctx.fillText(l, W / 2, y);
+    });
+    ctx.shadowBlur = 0;
+  }
   const shine = ctx.createLinearGradient(0, 0, W, H);
   shine.addColorStop(0, 'rgba(255,255,255,0)'); shine.addColorStop(0.42, 'rgba(255,255,255,0)'); shine.addColorStop(0.5, 'rgba(255,255,255,.13)'); shine.addColorStop(0.58, 'rgba(255,255,255,0)'); shine.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = shine; ctx.fillRect(0, 0, W, H);
@@ -1822,7 +1858,38 @@ async function paintSlotCanvas(canvas, slot) {
   const [img] = await Promise.all([slotImage(slot), fontReady(slot)]);
   drawInsert(canvas.getContext('2d'), slot, canvas.width, canvas.height, img);
 }
-const slotEmpty = s => !s.hasImg && !(s.text || '').trim();
+const slotEmpty = s => !s.hasImg && !(s.text || '').trim() && !(s.sub || '').trim();
+
+/* ---------- random designs ---------- */
+const RANDOM_TITLES = ['My Collection', 'Rare Finds', 'Shiny Hunters', 'Holo Heaven', 'Trade Binder', 'Favorites', 'Full Arts', 'Secret Rares', 'Dream Team', 'Starter Squad',
+  'Legends', 'Wish List', 'Best Pulls', 'Family Binder', 'Duplicates', 'Big Hits', 'Fan Favorites', 'Hall of Fame', 'Treasure Chest', 'Mystery Pulls', 'The Vault',
+  'Dragons', 'Fire Types', 'Water Types', 'Grass Types', 'Psychic Power', 'Night Shift', 'Little Monsters', 'Champions', 'Booster Box', 'Art Gallery', 'Card Club',
+  'Lucky Pulls', 'Gym Battles', 'Adventure Begins', 'Starlight', 'Rainbow Rares', 'Tiny Titans'];
+const RANDOM_SUBS = ['Master Set', 'Collection', 'Binder 1', 'Vol. 1', `${new Date().getFullYear()}`, 'Keep Out!', 'Trades Welcome', 'Need List', 'Do Not Touch', 'Est. ' + new Date().getFullYear(), 'Gotta Have It', 'Shiny Edition', 'The Good Stuff', 'Top Secret'];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function randomDesign(slot, { words = true } = {}) {
+  const set = Math.random() < 0.4 ? pick(SET_BORDERS) : null;
+  if (words) {
+    slot.text = set ? set[0] : pick(RANDOM_TITLES);
+    slot.sub = Math.random() < 0.55 ? pick(RANDOM_SUBS) : '';
+    slot.randWords = slot.text + '|' + slot.sub;
+  }
+  const bgs = BG_COLORS.filter(c => c !== '#FFFFFF');
+  Object.assign(slot, {
+    bg: pick(bgs),
+    border: set && Math.random() < 0.7 ? set[1] : pick(['', 'holo', 'holo', '#D4A72C', '#B8C2CC', ...SET_BORDERS.map(x => x[1])]),
+    pattern: pick(Object.keys(PATTERNS).filter(Boolean)),
+    font: pick(Object.keys(INS_FONTS)),
+    tstyle: pick(Object.keys(TEXT_STYLES).filter(k => k !== 'clean')),
+    tsize: 1,
+    textPos: pick(['middle', 'bottom', 'bottom', 'top']),
+    deco: Math.random() < 0.8 ? pick(Object.keys(DECOS)) : '',
+    decoPlace: pick(['corners', 'above', 'above', 'scatter']),
+    pid: uid(),   // new pattern layout
+  });
+}
+// a design is "still random" if its words are the ones we made up (so Surprise me may change them)
+const wordsAreRandom = sl => !(sl.text || '').trim() || sl.randWords === (sl.text || '') + '|' + (sl.sub || '');
 
 /* ---------- the sheet ---------- */
 function renderInserts() {
@@ -1834,6 +1901,7 @@ function renderInserts() {
     <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
       <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
+      <button class="btn" data-ins-act="random" ${ins.slots.some(slotEmpty) ? '' : 'disabled'}>🎲 Random card</button>
       <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
       <button class="btn ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear</button>
     </div>
@@ -1852,6 +1920,7 @@ function renderWholePage(modeSeg) {
       <div class="seg" id="insGrid">${[[9, '9-pocket'], [4, '4-pocket'], [12, '12-pocket']].map(([n, l]) => `<button data-g="${n}" class="${sl.grid === n ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="ins-top">
       <label class="btn primary filebtn">${sl.hasImg ? 'Change picture' : '＋ Add a picture'}<input type="file" accept="image/*" id="insFiles"></label>
+      <button class="btn" data-ins-act="random">🎲 Surprise me</button>
       <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>🖨 Print ${c * r} pieces</button>
       <button class="btn ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear</button>
     </div>
@@ -1899,8 +1968,10 @@ function openInsertEditor(k) {
         </div>
       </div>
       <div class="ins-controls">
+        <button class="btn sm" id="ieRandom" type="button">🎲 Surprise me</button>
         <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
           <button class="btn sm" id="ieUseSet" hidden></button></div>
+        <label class="field"><span>Second line <em class="opt">optional</em></span><input class="inp" id="ieSub" maxlength="40" value="${esc(slot.sub || '')}" placeholder="Like “Master set”, “Binder 2” or a year" autocomplete="off" enterkeyhint="done"></label>
         <div class="field"><span>Font</span><div class="chips fontchips" id="ieFont">${Object.entries(INS_FONTS).map(([k, [n, f, w]]) => `<button data-f="${k}" class="${(slot.font || 'bold') === k ? 'on' : ''}" style="font-family:${f.replace(/"/g, "'")};font-weight:${w}">${n}</button>`).join('')}</div></div>
         <div class="field"><span>Text style</span><div class="chips" id="ieTStyle">${Object.entries(TEXT_STYLES).map(([k, n]) => `<button data-ts="${k}" class="${(slot.tstyle || 'pop') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
         <label class="field"><span>Text size</span><input type="range" id="ieSize" min="0.5" max="1.6" step="0.05" value="${slot.tsize || 1}"></label>
@@ -1944,6 +2015,12 @@ function openInsertEditor(k) {
   $('#ieUseSet', m).onclick = () => { slot.text = setName(); $('#ieText', m).value = slot.text; offerSet(); changed(); };
   $('#ieText', m).oninput = e => { slot.text = e.target.value; offerSet(); changed(); };
   $('#ieText', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+  $('#ieSub', m).oninput = e => { slot.sub = e.target.value; changed(); };
+  $('#ieSub', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+  $('#ieRandom', m).onclick = () => {   // keeps words you typed; only rolls words it made up itself
+    const sc = m.scrollTop; randomDesign(slot, { words: wordsAreRandom(slot) }); saveIns();
+    openInsertEditor(k); render(); const nm = document.querySelector('.modal'); if (nm) nm.scrollTop = sc;
+  };
   offerSet();
   $$('#ieFont button', m).forEach(b => b.onclick = () => { slot.font = b.dataset.f; $$('#ieFont button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $('#ieSize', m).oninput = e => { slot.tsize = +e.target.value; changed(); };
@@ -2034,7 +2111,7 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 
 /* send a binder title card to the maker */
 /* Switching views carries the design across when the other side is still empty */
-const DESIGN_KEYS = ['text', 'textPos', 'bg', 'border', 'font', 'tsize', 'pattern', 'deco', 'decoPlace', 'tstyle', 'hasImg', 'x', 'y', 'z', 'rot'];
+const DESIGN_KEYS = ['text', 'sub', 'textPos', 'bg', 'border', 'font', 'tsize', 'pattern', 'deco', 'decoPlace', 'tstyle', 'hasImg', 'x', 'y', 'z', 'rot'];
 async function copyDesign(from, to) {
   DESIGN_KEYS.forEach(k => { if (k in from) to[k] = from[k]; else delete to[k]; });
   if (from.hasImg) {
@@ -2078,6 +2155,12 @@ $('#main').addEventListener('click', e => {
   const t = e.target.closest('[data-slot],[data-ins-act]'); if (!t) return;
   if (t.dataset.slot !== undefined) return openInsertEditor(t.dataset.slot === 'page' ? 'page' : +t.dataset.slot);
   if (t.dataset.insAct === 'print') return printInserts();
+  if (t.dataset.insAct === 'random') {
+    if (ins.mode === 'page') { randomDesign(ins.page, { words: wordsAreRandom(ins.page) }); saveIns(); return render(); }
+    const sl = ins.slots.find(slotEmpty); if (!sl) return;
+    randomDesign(sl); saveIns(); render();
+    return toast(`Made “${sl.text}”. Tap it to change anything, or roll again.`);
+  }
   if (t.dataset.insAct === 'clear' && ins.mode === 'page') return confirmBox('Clear the page design?', 'Remove the whole-page design and its picture?', 'Clear', async () => {
     const sl = ins.page; if (sl.hasImg) Sync.pictureChanged(sl.id, true); await imgDB.del(sl.id); delete imgEls[sl.id];
     ins.page = { ...pageSlot(sl.grid), id: sl.id }; saveIns(); render();
