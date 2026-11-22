@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
 <title>Binder Blueprint</title>
 <meta name="description" content="Plan your real trading card binder before you sleeve a single card.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -160,7 +160,8 @@ main{display:flex;flex-direction:column;gap:14px}
 .pk.sel{outline:3px solid var(--accent);outline-offset:-3px}
 .pk.title,.titlepage{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:var(--display);font-weight:800;padding:4px;line-height:1.1;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .pk.title{font-size:calc(11px*var(--zoom))}
-.titlepage{grid-column:1/-1;aspect-ratio:auto;border-radius:5px;font-size:calc(22px*var(--zoom));border:none;min-height:100%}
+.titlepage{grid-column:1/-1;border-radius:5px;font-size:calc(26px*var(--zoom));border:none;width:100%;padding:12%;box-shadow:inset 0 0 0 calc(6px*var(--zoom)) rgba(255,255,255,.25)}
+.titlepage span{display:block;max-width:100%}
 .pk.energy{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:calc(10px*var(--zoom));gap:3px}
 .pk.energy .orb{width:46%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8)}
 .pk.over-pk::after{content:"";position:absolute;inset:0;background:rgba(194,65,12,.18)}
@@ -201,7 +202,7 @@ main{display:flex;flex-direction:column;gap:14px}
 /* ---------- modal ---------- */
 .scrim{position:fixed;inset:0;background:rgba(5,10,12,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 @media(min-width:700px){.scrim{align-items:center}}
-.modal{background:var(--bg);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.3)}
+.modal{background:var(--bg);width:100%;max-width:520px;max-height:92vh;max-height:calc(100dvh - 24px);overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.3)}
 @media(min-width:700px){.modal{border-radius:18px}}
 .modal.wide{max-width:760px}
 .mhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -574,7 +575,8 @@ function pageHTML(b, L, map, s) {
   let inner = '';
   if (L.fullSides[s] !== undefined) {
     const it = b.items[L.fullSides[s]];
-    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)}">${esc(it.text || 'Title page')}</button>`;
+    const [gc, gr] = GRID[b.pockets];
+    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><span>${esc(it.text || 'Title page')}</span></button>`;
   } else {
     const row = map[s] || {};
     for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
@@ -917,18 +919,26 @@ function openAdd(beforeSec) {
     <div class="seg addtabs">${ADD_TABS.map(([k, l]) => `<button data-at="${k}" class="${k === A.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div id="addBody"></div>
     <div class="where">
-      <label>Put it <select class="inp" id="aPos"><option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
+      <label>Put it <select class="inp" id="aPos">${secs.length ? '<option value="start">at the start</option>' : ''}<option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
       <label>Start it on <select class="inp" id="aStart"><option value="here">the next free pocket</option><option value="page">a fresh page</option>${b.spreads ? '<option value="spread">a fresh spread (left page)</option>' : ''}</select></label>
     </div>
     <div id="addPreview" class="preview">Pick something to add.</div>
     <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="addGo" disabled>Add to binder</button></div>`, true);
+  A.posTouched = !!beforeSec;
   $$('[data-at]', m).forEach(btn => btn.onclick = () => { A.tab = btn.dataset.at; $$('[data-at]', m).forEach(x => x.classList.toggle('on', x === btn)); showAddTab(); });
-  $('#aPos', m).onchange = refreshPreview;
+  $('#aPos', m).onchange = () => { A.posTouched = true; refreshPreview(); };
+  // Enter on the keyboard adds it (no need to close the keyboard to reach the button)
+  m.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || !e.target.matches('#tText, #eN')) return;
+    e.preventDefault(); e.target.blur();
+    if (!$('#addGo').disabled) doAdd();
+  });
   $('#aStart', m).onchange = refreshPreview;
   $('#addGo', m).onclick = doAdd;
   showAddTab();
 }
 function insertIndex(b, pos) {
+  if (pos === 'start') return 0;
   if (pos === 'end') return b.items.length;
   const i = b.items.findIndex(it => it.sec === pos);
   return i < 0 ? b.items.length : i;
@@ -996,7 +1006,10 @@ async function setPicker(el, onPick) {
 function loadingInto(el, msg) { el.innerHTML = `<div class="muted small" style="padding:8px">${msg}</div>`; }
 
 function showAddTab() {
-  const body = $('#addBody'); A.build = null; refreshPreview();
+  const body = $('#addBody'); A.build = null;
+  const pos = $('#aPos');
+  if (!A.posTouched && pos) pos.value = A.tab === 'title' && pos.querySelector('[value=start]') ? 'start' : 'end';
+  refreshPreview();
   const t = A.tab;
   if (t === 'set') {
     body.innerHTML = `<div class="panel"><div id="sp"></div><div id="setOpts"></div></div>`;
@@ -1095,7 +1108,7 @@ function showAddTab() {
   if (t === 'title') {
     let color = TITLE_COLORS[0];
     body.innerHTML = `<div class="panel">
-      <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
+      <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" enterkeyhint="done" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
       <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button></div></div>
       <div class="field" style="margin-bottom:0"><span>After the title…</span>
@@ -1106,8 +1119,8 @@ function showAddTab() {
     $$('#tSize button').forEach(btn => btn.onclick = () => { size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
     $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview;
     A.build = () => {
-      const text = $('#tText').value.trim() || 'Title', then = $('#tThen').value;
-      return { label: `Title: ${text}`, items: [{ k: 'title', text, color, size }, ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
+      const typed = $('#tText').value.trim(), text = typed || 'Title', then = $('#tThen').value;
+      return { label: typed ? `Title “${typed}”` : (size === 'page' ? 'A title page' : 'A title card'), items: [{ k: 'title', text, color, size }, ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
     };
     refreshPreview();
   }
