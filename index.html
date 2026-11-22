@@ -1505,15 +1505,24 @@ const Sync = {
     return this.loading ??= (async () => {
       try {
         const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-        this.sb = mod.createClient(SB_URL, SB_KEY, { auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
+        this.sb = mod.createClient(SB_URL, SB_KEY, { auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
         this.sb.auth.onAuthStateChange((ev, session) => {
           const u = session?.user || null;
-          if (u && (!this.user || this.user.id !== u.id)) { this.user = u; setTimeout(() => this.start(), 0); }
+          if (u && (!this.user || this.user.id !== u.id)) {
+            this.user = u; setTimeout(() => this.start(), 0);
+            if ($('#siBox')) { closeModal(); toast('Signed in. Your binders are saving to your account.'); }   // signed in from the email link in another tab
+          }
           else if (!u && this.user) { this.user = null; this.stop(); }
           paintAccount();
         });
-        if (/[?&]code=/.test(location.search)) history.replaceState(history.state, '', location.pathname + location.hash);
+        const fromLink = /access_token=|error_description=/.test(location.hash);
+        const linkError = /error_description=/.test(location.hash);
         const { data } = await this.sb.auth.getSession();
+        if (fromLink) {
+          history.replaceState(null, '', location.pathname + '#home');
+          if (linkError) setTimeout(() => toast('That sign-in link expired or was already used. Ask for a new one.'), 300);
+          else if (data.session) setTimeout(() => toast('Signed in. Your binders are saving to your account.'), 300);
+        }
         if (data.session && !this.user) { this.user = data.session.user; setTimeout(() => this.start(), 0); }
         return this.sb;
       } catch (e) { this.loading = null; this.setStatus('offline'); return null; }
@@ -1766,9 +1775,9 @@ function openSignIn() {
       <p class="muted" style="margin:0">Save your binders to your account and use them on any device. One account for the whole family.</p>
       <form id="siForm" class="field" style="margin:0"><span>Grown-up’s email</span>
         <input class="inp" id="siEmail" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com">
-        <button class="btn primary" id="siSend">Email me a code</button></form>
+        <button class="btn primary" id="siSend">Email me a sign-in link</button></form>
     </div>
-    <p class="small muted">No password needed. ${store.binders.length ? 'The binders on this device are added to your account.' : ''}</p>`);
+    <p class="small muted">No password needed: we email you a link. ${store.binders.length ? 'The binders on this device are added to your account.' : ''}</p>`);
   setTimeout(() => $('#siEmail', m)?.focus(), 50);
   Sync.load();
   $('#siForm', m).onsubmit = async e => {
@@ -1776,13 +1785,13 @@ function openSignIn() {
     const email = $('#siEmail', m).value.trim(), btn = $('#siSend', m);
     btn.disabled = true; btn.textContent = 'Sending…';
     try { await Sync.sendCode(email); }
-    catch (err) { btn.disabled = false; btn.textContent = 'Email me a code'; return toast(/rate|seconds/i.test(err.message) ? 'Please wait a minute before asking for another code.' : (err.message || 'That didn’t work. Try again.')); }
-    $('#siBox', m).innerHTML = `<p style="margin:0">We emailed a 6-digit code to <b>${esc(email)}</b>. It can take a minute.</p>
-      <form id="siCodeForm" class="field" style="margin:0"><span>Code</span>
+    catch (err) { btn.disabled = false; btn.textContent = 'Email me a sign-in link'; return toast(/rate|seconds/i.test(err.message) ? 'Please wait a minute before asking for another email.' : (err.message || 'That didn’t work. Try again.')); }
+    $('#siBox', m).innerHTML = `<p style="margin:0">📬 We sent a sign-in link to <b>${esc(email)}</b>.</p>
+      <p class="muted" style="margin:0">Open that email <b>on this ${/Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 'phone' : 'computer'}</b> and tap the link. You’ll be signed in right away. It can take a minute to arrive; check spam too.</p>
+      <details><summary class="small muted" style="cursor:pointer">The email has a 6-digit code instead?</summary>
+      <form id="siCodeForm" class="field" style="margin:8px 0 0"><span>Code</span>
         <input class="inp code" id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
-        <button class="btn primary" id="siGo">Sign in</button></form>
-      <p class="small muted" style="margin:0">Got a link instead of a code? Open it on this device and you’ll be signed in.</p>`;
-    $('#siCode', m).focus();
+        <button class="btn primary" id="siGo">Sign in</button></form></details>`;
     $('#siCodeForm', m).onsubmit = async ev => {
       ev.preventDefault();
       const code = $('#siCode', m).value.replace(/\D/g, ''), go = $('#siGo', m);
@@ -1821,7 +1830,9 @@ function openFamily() {
 }
 $('#acct').onclick = () => openAccount();
 paintAccount();
-if (Sync.hasStoredSession() || /[?&]code=/.test(location.search)) Sync.load();
+if (Sync.hasStoredSession() || /access_token=|error_description=/.test(location.hash)) Sync.load();
+// An emailed link opened in a tab that already has the app: reload so the sign-in is picked up.
+window.addEventListener('hashchange', () => { if (/access_token=|error_description=/.test(location.hash)) location.reload(); });
 
 /* ---------------- light / dark ---------------- */
 const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>';
