@@ -152,7 +152,7 @@ main{display:flex;flex-direction:column;gap:14px}
 .pk.broken .ph.under{display:flex}
 .pk .ph b{font:500 calc(11px*var(--zoom)) var(--mono);color:var(--fg)}
 .pk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.pk.need img,.pk.need .ph{filter:grayscale(1);opacity:.35}
+.pk.need img,.pk.need .ph{filter:grayscale(.85);opacity:.62}
 .pk.need{box-shadow:inset 0 0 0 1.5px var(--line)}
 .pk .tag{position:absolute;left:3px;bottom:3px;font:500 9px var(--mono);background:var(--surface);color:var(--muted);border-radius:4px;padding:0 4px;line-height:1.6;opacity:.95}
 .pk.need:has(.ph:not(.under)) .tag{display:none}
@@ -260,6 +260,12 @@ main{display:flex;flex-direction:column;gap:14px}
 .pk.ghost{position:fixed;z-index:80;pointer-events:none;box-shadow:0 14px 30px rgba(0,0,0,.45);border-radius:6px;opacity:.95}
 .pk.drop-target{outline:3px solid var(--accent);outline-offset:-1px;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
 body.dragging,body.dragging *{cursor:grabbing!important}
+#trash{position:fixed;left:0;right:0;bottom:0;height:calc(84px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);z-index:70;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--need-bg);color:var(--need);border-top:2px dashed var(--need);font:700 16px var(--body);transform:translateY(110%);transition:transform .18s ease,background .12s}
+#trash svg{width:26px;height:26px}
+body.dragging #trash{transform:none}
+#trash.hot{background:var(--need);color:#fff;border-top-style:solid}
+#trash.hot svg{transform:scale(1.2)}
+body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .pk.just-dropped{animation:pop .4s ease}
 @keyframes pop{0%{transform:scale(1.15)}100%{transform:scale(1)}}
 /* inserts */
@@ -312,7 +318,7 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
 .gc.nopic{justify-content:center}
 .gc.nopic .cap{background:transparent;text-align:center;font-size:9.5px;-webkit-line-clamp:4}
 .gc.skip{border:1.5px dashed #8f99a1;background:repeating-linear-gradient(45deg,#fff,#fff 5px,#f1f3f5 5px,#f1f3f5 10px)}
-.gc.skip img{filter:grayscale(1);opacity:.22}
+.gc.skip img{filter:grayscale(1);opacity:.4}
 .gc.skip .cap{background:transparent;color:#5f6b74}
 .gc.unused{border:1px solid #eceff1;background:transparent}
 .gsec-h{margin:8px 0 0;color:var(--need)}
@@ -373,6 +379,7 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
   <main id="main"></main>
 </div>
 <button class="fab" id="fab">＋ Add</button>
+<div id="trash" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg><span>Drop here to remove</span></div>
 <div id="modal-root"></div>
 <div id="ins-print"></div>
 <style id="pagestyle"></style>
@@ -706,7 +713,7 @@ function renderBinder() {
         <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap to open</button>
         <button data-tap="own" class="${store.tapMode === 'own' ? 'on' : ''}">Tap to mark ✓</button>
       </div>
-    </div><p class="hint">Hold a card, then drag it to move it.</p><div class="spreads${z.stacked ? ' stacked' : ''}" style="--pw:${z.pw}px;--zoom:${z.text}">`;
+    </div><p class="hint">Hold a card, then drag it to move it, or drop it on the bin at the bottom to remove it.</p><div class="spreads${z.stacked ? ' stacked' : ''}" style="--pw:${z.pw}px;--zoom:${z.text}">`;
   if (b.spreads) {
     const groups = [[-1, 0]];
     for (let s = 1; s < total; s += 2) groups.push([s, s + 1]);
@@ -1153,7 +1160,7 @@ function openItem(i) {
 /* ---------------- drag to rearrange ----------------
    Touch: hold a card still for a moment, then drag. Moving early is a normal scroll.
    Mouse: press and drag a few pixels. Drop on any pocket to put the card there. */
-const DRAG = { el: null, i: -1, id: null, type: '', x0: 0, y0: 0, x: 0, y: 0, timer: 0, active: false, ghost: null, target: null, raf: 0, justDropped: false };
+const DRAG = { trash: false, el: null, i: -1, id: null, type: '', x0: 0, y0: 0, x: 0, y: 0, timer: 0, active: false, ghost: null, target: null, raf: 0, justDropped: false };
 const HOLD_MS = 260;
 
 function dragReset() {
@@ -1163,7 +1170,8 @@ function dragReset() {
   DRAG.el?.classList.remove('lifted', 'pressing');
   $$('.drop-target').forEach(x => x.classList.remove('drop-target'));
   document.body.classList.remove('dragging');
-  Object.assign(DRAG, { el: null, i: -1, id: null, active: false, ghost: null, target: null });
+  $('#trash').classList.remove('hot');
+  Object.assign(DRAG, { el: null, i: -1, id: null, active: false, ghost: null, target: null, trash: false });
 }
 function dragLift() {
   const el = DRAG.el; if (!el) return;
@@ -1184,7 +1192,9 @@ function dragMoveGhost() {
   if (!DRAG.ghost) return;
   DRAG.ghost.style.transform = `translate(${DRAG.x - DRAG.dx}px, ${DRAG.y - DRAG.dy}px) rotate(-3deg) scale(1.08)`;
   const under = document.elementFromPoint(DRAG.x, DRAG.y);
-  const t = under && under.closest('.page .pk');
+  const overTrash = !!(under && under.closest('#trash'));
+  if (overTrash !== DRAG.trash) { DRAG.trash = overTrash; $('#trash').classList.toggle('hot', overTrash); if (overTrash) try { navigator.vibrate?.(8); } catch (e) {} }
+  const t = overTrash ? null : under && under.closest('.page .pk');
   if (t !== DRAG.target) {
     DRAG.target?.classList.remove('drop-target');
     DRAG.target = t && t !== DRAG.el ? t : null;
@@ -1193,10 +1203,10 @@ function dragMoveGhost() {
 }
 function dragLoop() {   // scroll the page when the finger is near the top or bottom edge
   if (!DRAG.active) return;
-  const edge = 80, h = innerHeight;
+  const edge = 80, bottom = innerHeight - $('#trash').offsetHeight;
   let v = 0;
   if (DRAG.y < edge) v = -Math.ceil((edge - DRAG.y) / 6);
-  else if (DRAG.y > h - edge) v = Math.ceil((DRAG.y - (h - edge)) / 6);
+  else if (DRAG.y > bottom - edge && DRAG.y < bottom) v = Math.ceil((DRAG.y - (bottom - edge)) / 6);
   if (v) { window.scrollBy(0, v); dragMoveGhost(); }
   DRAG.raf = requestAnimationFrame(dragLoop);
 }
@@ -1212,6 +1222,11 @@ function dropIndex(b, from, target) {
   return { at: best + 1, sec: best >= 0 ? b.items[best].sec : b.items[0].sec, before: false };
 }
 function dragDrop() {
+  if (DRAG.trash) {
+    const b = cur(), i = DRAG.i, [gone] = b.items.splice(i, 1);
+    commit();
+    return toast(gone.k === 'card' ? `Removed ${gone.name}` : 'Removed', { label: 'Undo', fn: () => { b.items.splice(i, 0, gone); commit(); } });
+  }
   const b = cur(), from = DRAG.i, target = DRAG.target;
   if (!b || !target || from < 0) return;
   const snapshot = JSON.stringify({ items: b.items, sections: b.sections });
