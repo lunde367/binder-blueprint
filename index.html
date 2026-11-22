@@ -131,10 +131,9 @@ main{display:flex;flex-direction:column;gap:14px}
 .spreads.stacked .spread{flex-direction:column;gap:20px;padding-bottom:22px}
 .spreads.stacked .page.cover{display:none}
 .zoomer{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.18);overflow:hidden}
-.zoomer{padding:4px;gap:4px}
-.zoomer button{height:44px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:700 13px var(--body);display:flex;align-items:center;gap:6px;padding:0 12px}
-.zoomer button svg{width:24px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
-.zoomer button.on{background:var(--fg);color:var(--bg)}
+.zoomer{padding:0;border-radius:50%}
+.zoomer button{width:56px;height:56px;border:0;border-radius:50%;background:transparent;color:var(--fg);display:grid;place-items:center;padding:0}
+.zoomer button svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .spread-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
 .spread-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 .spread{display:flex;gap:6px;background:linear-gradient(90deg,var(--binder),var(--binder-2) 50%,var(--binder));padding:12px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
@@ -236,7 +235,8 @@ main{display:flex;flex-direction:column;gap:14px}
 .results .pk.own .tag{display:none}
 .erow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
 .erow:last-child{border-bottom:0}
-.erow .dot{width:24px;height:24px;border-radius:50%}
+.erow .dot{width:30px;height:42px;border-radius:4px;overflow:hidden;flex:none}
+.erow .dot img{width:100%;height:100%;object-fit:cover;display:block}
 .erow b{flex:1}
 .erow .qty{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
@@ -402,6 +402,8 @@ const GRID = {4:[2,2], 9:[3,3], 12:[3,4]};          // pockets -> [cols, rows]
 const TITLE_COLORS = ['#F2B705','#3A86FF','#E63946','#2A9D8F','#8E5CF7','#FF7AB6','#FF8C42','#2B2D42','#8D99AE'];
 const ENERGY = [['Grass','#4FAF5A'],['Fire','#EE5A2F'],['Water','#2F8FD8'],['Lightning','#E9B90C'],['Psychic','#9B4FB5'],['Fighting','#B5652F'],['Darkness','#3B3F4A'],['Metal','#8A95A3'],['Fairy','#E58BBE']];
 const ENERGY_COLOR = Object.fromEntries(ENERGY);
+// Standard basic energy card art (Crown Zenith; Fairy from Sun & Moon, its last printing)
+const ENERGY_IMG = Object.fromEntries(Object.entries({ Grass: 'swsh/swsh12.5/152', Fire: 'swsh/swsh12.5/153', Water: 'swsh/swsh12.5/154', Lightning: 'swsh/swsh12.5/155', Psychic: 'swsh/swsh12.5/156', Fighting: 'swsh/swsh12.5/157', Darkness: 'swsh/swsh12.5/158', Metal: 'swsh/swsh12.5/159', Fairy: 'sm/sm1/172' }).map(([t, p]) => [t, `https://assets.tcgdex.net/en/${p}/low.webp`]));
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
@@ -571,7 +573,7 @@ function pocketHTML(b, i, over) {
   if (it.k === 'card')
     return `<button class="pk ${it.own ? 'own' : 'need'}${o}" data-i="${i}" title="#${esc(it.num)} ${esc(it.name)}">${cardFace(it)}<span class="tag">${it.own ? '✓' : '#' + esc(it.num)}</span></button>`;
   if (it.k === 'empty') return `<button class="pk empty${o}" data-i="${i}" title="Empty pocket"></button>`;
-  if (it.k === 'energy') return `<button class="pk energy${o}" data-i="${i}" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}</button>`;
+  if (it.k === 'energy') return `<button class="pk energy${o}" data-i="${i}" style="background:${ENERGY_COLOR[it.type]}" title="${esc(it.type)} Energy"><span class="orb"></span>${esc(it.type)}<img src="${ENERGY_IMG[it.type]}" alt="" loading="lazy" onerror="this.remove()"></button>`;
   if (it.k === 'title') return `<button class="pk title${o}" data-i="${i}" style="background:${esc(it.color)}">${esc(it.text || 'Title')}</button>`;
   return '';
 }
@@ -740,9 +742,8 @@ function renderBinder() {
   if (hidden > 0) html += `<div class="more-pages"><button class="btn sm" data-act="showall">Show the ${plural(hidden, 'empty page')} left</button></div>`;
   else if (store.showAll && L.capSides > lastUsed + 1) html += `<div class="more-pages"><button class="btn sm" data-act="showless">Hide empty pages</button></div>`;
   const one = store.view === 'one';
-  html += `<div class="zoomer" role="group" aria-label="How many pages across">
-    <button data-view="two" class="${one ? '' : 'on'}" aria-pressed="${!one}" title="Two pages side by side"><svg viewBox="0 0 28 20"><rect x="1" y="1" width="12" height="18" rx="2"/><rect x="15" y="1" width="12" height="18" rx="2"/></svg><span>2 pages</span></button>
-    <button data-view="one" class="${one ? 'on' : ''}" aria-pressed="${one}" title="One big page at a time"><svg viewBox="0 0 28 20"><rect x="7" y="1" width="14" height="18" rx="2"/></svg><span>1 page</span></button></div>`;
+  html += `<div class="zoomer"><button data-view="${one ? 'two' : 'one'}" aria-label="${one ? 'Zoom out: two pages side by side' : 'Zoom in: one big page'}" title="${one ? 'Zoom out' : 'Zoom in'}">
+    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M7.5 10.5h6${one ? '' : 'M10.5 7.5v6'}"/></svg></button></div>`;
   $('#main').innerHTML = html;
 }
 /* Page size: never wider than the screen. Up to "fit" both pages sit side by side;
@@ -813,7 +814,7 @@ function renderGuide() {
       return `<div class="gc ${it.own ? 'go' : 'skip'}${pic ? '' : ' nopic'}">${pic}${it.own ? '<i class="tick"></i>' : ''}<span class="cap"><span class="n">#${esc(it.num)}</span> ${esc(it.name)}</span></div>`;
     }
     if (it.k === 'empty') return `<div class="gc skip nopic"><span class="cap">empty</span></div>`;
-    if (it.k === 'energy') return `<div class="gc go nopic" style="background:${ENERGY_COLOR[it.type]}"><i class="tick"></i><span class="cap light">${esc(it.type)} Energy</span></div>`;
+    if (it.k === 'energy') return g.pics ? `<div class="gc go"><img src="${ENERGY_IMG[it.type]}" alt="" onerror="this.remove()"><i class="tick"></i><span class="cap">${esc(it.type)} Energy</span></div>` : `<div class="gc go nopic" style="background:${ENERGY_COLOR[it.type]}"><i class="tick"></i><span class="cap light">${esc(it.type)} Energy</span></div>`;
     if (it.k === 'title') return `<div class="gc go nopic" style="background:${esc(it.color)}"><i class="tick"></i><span class="cap light">${esc(it.text || 'Title')}</span></div>`;
     return '';
   };
@@ -1103,7 +1104,7 @@ function showAddTab() {
   }
   if (t === 'energy') {
     const n = {};
-    body.innerHTML = `<div class="panel"><p class="small muted" style="margin-top:0">Basic energy cards. Choose how many of each.</p>${ENERGY.map(([e, c]) => `<div class="erow"><span class="dot" style="background:${c}"></span><b>${e}</b><button class="icon-btn" data-e="${e}" data-d="-1">−</button><span class="qty" id="en-${e}">0</span><button class="icon-btn" data-e="${e}" data-d="1">＋</button></div>`).join('')}</div>`;
+    body.innerHTML = `<div class="panel"><p class="small muted" style="margin-top:0">Basic energy cards. Choose how many of each.</p>${ENERGY.map(([e, c]) => `<div class="erow"><span class="dot" style="background:${c}"><img src="${ENERGY_IMG[e]}" alt="" onerror="this.remove()"></span><b>${e}</b><button class="icon-btn" data-e="${e}" data-d="-1">−</button><span class="qty" id="en-${e}">0</span><button class="icon-btn" data-e="${e}" data-d="1">＋</button></div>`).join('')}</div>`;
     body.onclick = e => {
       const btn = e.target.closest('[data-e]'); if (!btn) return;
       const k = btn.dataset.e; n[k] = Math.max(0, (n[k] || 0) + +btn.dataset.d); $(`#en-${k}`).textContent = n[k]; refreshPreview();
@@ -1162,7 +1163,7 @@ function openItem(i) {
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
       <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>
       <button class="btn sm" id="dIns">✂︎ Make a printable card for this</button>`;
-  else if (it.k === 'energy') top = `<h2>${esc(it.type)} Energy</h2><p class="muted small">${spot}</p>`;
+  else if (it.k === 'energy') top = `<div class="detail"><div class="dimg"><div class="pk energy" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}<img src="${ENERGY_IMG[it.type]}" alt="" onerror="this.remove()"></div></div><div class="grow"><h2>${esc(it.type)} Energy</h2><p class="muted small">Basic energy · ${spot}</p></div></div>`;
   else top = `<h2>Empty pocket</h2><p class="muted small">${spot}. Saved for later.</p>`;
   const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
     <div class="drow"><button class="btn sm" id="dPrev">◀ Move earlier</button><button class="btn sm" id="dNext">Move later ▶</button></div>
