@@ -128,12 +128,17 @@ main{display:flex;flex-direction:column;gap:14px}
 
 /* ---------- binder view ---------- */
 .spreads{display:flex;flex-direction:column;gap:18px;align-items:center}
+.spreads.stacked .spread{flex-direction:column;gap:20px;padding-bottom:22px}
+.spreads.stacked .page.cover{display:none}
+.zoomer{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.18);overflow:hidden}
+.zoomer button{width:48px;height:48px;border:0;background:transparent;color:var(--fg);font:700 22px var(--body);display:grid;place-items:center}
+.zoomer button + button{border-left:1px solid var(--line)}
+.zoomer button:disabled{opacity:.3;cursor:default}
 .spread-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
 .spread-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 .spread{display:flex;gap:6px;background:linear-gradient(90deg,var(--binder),var(--binder-2) 50%,var(--binder));padding:12px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
 .spread.single{background:var(--binder)}
-.page{--pw:calc(min(42vw,330px)*var(--zoom));width:var(--pw);background:var(--page);border-radius:7px;padding:6px;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px;align-content:start;position:relative}
-.spread.single .page{--pw:calc(min(86vw,440px)*var(--zoom))}
+.page{width:var(--pw,170px);background:var(--page);border-radius:7px;padding:6px;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px;align-content:start;position:relative}
 .page.cover{background:transparent;display:grid;place-items:center;color:#7d929c;font-size:12px;text-transform:uppercase;letter-spacing:.08em;text-align:center;border:1.5px dashed rgba(255,255,255,.14)}
 .page.over{background:var(--need-bg)}
 .page .pno{position:absolute;bottom:-1px;left:0;right:0;text-align:center;font:500 10px var(--mono);color:#7d929c;transform:translateY(100%);padding-top:2px}
@@ -280,22 +285,37 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100vw - 32px);text-align:center}
 
 /* ---------- sleeving guide ---------- */
-.gpages{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
-.gpage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;break-inside:avoid;page-break-inside:avoid}
-.gpage h3{font-size:18px;display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.gpage h3 small{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.glegend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.glegend span{display:inline-flex;align-items:center;gap:6px}
+.lg{display:inline-block;width:14px;height:18px;border-radius:3px}
+.lg.tick{border:1.5px solid var(--fg);background:#fff}
+.lg.skip{border:1.5px dashed var(--muted)}
+.gspreads{display:flex;flex-direction:column;gap:14px}
+.gspread{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;break-inside:avoid;page-break-inside:avoid}
+.gspread h3{font-size:17px;margin-bottom:8px;display:flex;gap:8px;align-items:baseline}
+.gspread h3 small{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gpair{display:flex;gap:14px}
+.gpg{flex:1;min-width:0}
+.gpg.over .ggrid{outline:2px solid var(--need);outline-offset:2px;border-radius:4px}
+.gcover{display:grid;place-items:center;border:1.5px dashed var(--line);border-radius:8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:center}
+.gpg .lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px}
+.gpg .lbl span{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .ggrid{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px}
-.gcell{border:1px solid var(--line);border-radius:6px;padding:4px;font-size:10.5px;line-height:1.2;min-height:64px;display:flex;flex-direction:column;gap:2px;position:relative;overflow-wrap:anywhere}
-.gcell .gimg{height:62px;display:flex;justify-content:center;margin-bottom:2px}
-.gcell .gimg img{height:100%;border-radius:3px}
-.gcell b{font-size:11.5px}
-.gcell .n{font-family:var(--mono);font-size:10px}
-.gcell .tick{position:absolute;top:3px;right:3px;width:13px;height:13px;border:1.5px solid var(--muted);border-radius:3px;background:var(--surface)}
-.gcell.leave{border-style:dashed;background:var(--bg);color:var(--muted)}
-.gcell.leave b{color:var(--need)}
-.gcell.unused{border-color:transparent;background:var(--bg);color:var(--line);justify-content:center;align-items:center}
-.gcell.full{grid-column:1/-1;min-height:90px;justify-content:center;align-items:center;text-align:center;font-size:14px}
-.gsec-h{grid-column:1/-1;margin:8px 0 0;color:var(--need)}
+.gc{aspect-ratio:63/88;border:1px solid #b9c2c9;border-radius:5px;position:relative;overflow:hidden;background:#fff;display:flex;flex-direction:column;justify-content:flex-end}
+.gc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gc .cap{position:relative;background:rgba(255,255,255,.93);color:#15232B;font:600 8.5px/1.15 var(--body);padding:2px 3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gc .cap .n{font:500 8px var(--mono)}
+.gc .cap.light{background:transparent;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);text-align:center;font-size:10px}
+.gc .cap.light.big{font:800 16px/1.2 var(--display);-webkit-line-clamp:4}
+.gc .cap.light.big small{font:600 10px var(--body);opacity:.85}
+.gc .tick{position:absolute;top:3px;left:3px;width:14px;height:14px;border:1.5px solid #222;border-radius:3px;background:#fff;z-index:1}
+.gc.nopic{justify-content:center}
+.gc.nopic .cap{background:transparent;text-align:center;font-size:9.5px;-webkit-line-clamp:4}
+.gc.skip{border:1.5px dashed #8f99a1;background:repeating-linear-gradient(45deg,#fff,#fff 5px,#f1f3f5 5px,#f1f3f5 10px)}
+.gc.skip img{filter:grayscale(1);opacity:.22}
+.gc.skip .cap{background:transparent;color:#5f6b74}
+.gc.unused{border:1px solid #eceff1;background:transparent}
+.gsec-h{margin:8px 0 0;color:var(--need)}
 .printhead{display:none}
 
 @media (max-width:560px){
@@ -322,8 +342,16 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
   .printhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px}
   .printhead h1{font-size:20px;margin:0}
   .printhead div{font-size:11px;color:#333;text-align:right}
-  .gpages{display:block}
-  .gpage{border:1px solid #999;margin-bottom:10px;border-radius:8px}
+  .glegend{color:#333;font-size:10px;margin-bottom:6px}
+  .gspreads{display:block}
+  .gspread{border:1px solid #999;border-radius:8px;margin-bottom:0.12in;padding:6px 8px}
+  .gspread h3{font-size:13px;margin-bottom:4px}
+  .gpair{gap:0.2in;justify-content:center}
+  .gpg{flex:0 0 3.1in}
+  .gpg.gcover{height:auto;align-self:stretch}
+  .gc .cap{font-size:7.5px}
+  .gc .cap .n{font-size:7px}
+  .gc{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 </head>
@@ -594,7 +622,7 @@ function render() {
   $('#title').textContent = home ? 'Binder Blueprint' : insv ? 'Title & divider cards' : b.name;
   $('#sub').textContent = home ? 'Plan your real binder before you sleeve a single card.' : insv ? 'Make your own inserts at real card size.' : `${b.pockets}-pocket binder · ${b.pages} pages`;
   $('#fab').style.display = !home && !insv && b.items.length && (tab === 'binder' || tab === 'contents') ? '' : 'none';
-  document.documentElement.style.setProperty('--zoom', store.zoom);
+  document.documentElement.style.setProperty('--zoom', 1);
   ({ home: renderHome, inserts: renderInserts, binder: renderBinder, contents: renderContents, guide: renderGuide, setup: renderSetup })[tab]();
 }
 function renderHome() {
@@ -672,15 +700,13 @@ function renderBinder() {
   const lastUsed = Math.max(L.usedSides, 1);
   const showTo = store.showAll ? Math.max(L.capSides, L.usedSides) : Math.min(Math.max(lastUsed + (b.spreads && lastUsed % 2 === 0 ? 1 : 0), Math.min(2, L.capSides)), Math.max(L.capSides, lastUsed));
   const total = Math.max(showTo, 1);
+  const z = pageSize(b, store.zoom);
   let html = statsHTML(b, L) + `<div class="toolbar">
       <div class="seg" role="group" aria-label="When I tap a card">
         <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap to open</button>
         <button data-tap="own" class="${store.tapMode === 'own' ? 'on' : ''}">Tap to mark ✓</button>
       </div>
-      <span class="grow"></span>
-      <span style="display:flex;gap:6px"><button class="icon-btn" data-zoom="-1" aria-label="Smaller">−</button>
-      <button class="icon-btn" data-zoom="1" aria-label="Bigger">＋</button></span>
-    </div><p class="hint">Hold a card, then drag it to move it.</p><div class="spreads">`;
+    </div><p class="hint">Hold a card, then drag it to move it.</p><div class="spreads${z.stacked ? ' stacked' : ''}" style="--pw:${z.pw}px;--zoom:${z.text}">`;
   if (b.spreads) {
     const groups = [[-1, 0]];
     for (let s = 1; s < total; s += 2) groups.push([s, s + 1]);
@@ -697,8 +723,33 @@ function renderBinder() {
   const hidden = L.capSides - total;
   if (hidden > 0) html += `<div class="more-pages"><button class="btn sm" data-act="showall">Show the ${plural(hidden, 'empty page')} left</button></div>`;
   else if (store.showAll && L.capSides > lastUsed + 1) html += `<div class="more-pages"><button class="btn sm" data-act="showless">Hide empty pages</button></div>`;
+  const k = zoomIndex(store.zoom);
+  html += `<div class="zoomer" role="group" aria-label="Page size"><button data-zoom="-1" aria-label="Smaller pages" ${k === 0 ? 'disabled' : ''}>−</button><button data-zoom="1" aria-label="Bigger pages" ${pageSize(b, ZOOMS[k + 1] || 99).pw <= z.pw + 1 ? 'disabled' : ''}>＋</button></div>`;
   $('#main').innerHTML = html;
 }
+/* Page size: never wider than the screen. Up to "fit" both pages sit side by side;
+   bigger than that, a spread's two pages stack (left page above right page). */
+const ZOOMS = [0.6, 0.8, 1, 1.3, 1.6, 2, 2.6, 3.2];
+const zoomIndex = v => ZOOMS.reduce((best, x, i) => Math.abs(x - v) < Math.abs(ZOOMS[best] - v) ? i : best, 0);
+function pageSize(b, zoom) {
+  const avail = Math.max(200, ($('#main')?.clientWidth || innerWidth - 32) - 24);   // inside the binder's dark edge
+  const fit = b.spreads ? (avail - 6) / 2 : avail;
+  const base = Math.min(330, fit);
+  const pw = Math.floor(zoom <= 1 ? base * zoom : Math.min(base * zoom, avail));
+  return { pw, stacked: b.spreads && pw * 2 + 6 > avail, text: (pw / 190).toFixed(2) };
+}
+function zoomBy(d) {
+  // keep the spread you're looking at in the same spot on screen
+  const wraps = $$('#main .spread-wrap');
+  const anchor = wraps.find(w => w.getBoundingClientRect().bottom > 90) || wraps[0];
+  const ai = wraps.indexOf(anchor), top = anchor ? anchor.getBoundingClientRect().top : 0;
+  store.zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, zoomIndex(store.zoom) + d))];
+  save(); render();
+  const again = $$('#main .spread-wrap')[ai];
+  if (again) window.scrollBy(0, again.getBoundingClientRect().top - top);
+}
+let resizeT;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (tab === 'binder') render(); }, 150); });
 
 function renderContents() {
   const b = cur(), L = layout(b), order = sectionOrder(b);
@@ -722,45 +773,60 @@ function renderContents() {
 }
 
 function renderGuide() {
-  const b = cur(), L = layout(b), map = bySide(L), g = store.guide, [cols] = GRID[b.pockets];
+  const b = cur(), L = layout(b), map = bySide(L), g = store.guide, [cols, rows] = GRID[b.pockets];
   const total = L.usedSides;
-  let h = `<div class="no-print stack" style="display:flex;flex-direction:column;gap:10px">
+  const cards = b.items.filter(i => i.k === 'card'), toSleeve = b.items.filter(i => i.k !== 'break' && i.k !== 'empty' && !(i.k === 'card' && !i.own)).length;
+  const legend = `<div class="glegend"><span><i class="lg tick"></i>Put this card in, then tick it</span><span><i class="lg skip"></i>Leave this pocket empty for now</span></div>`;
+  let h = `<div class="no-print" style="display:flex;flex-direction:column;gap:10px">
       <div class="toolbar">
-        <label class="switch"><input type="checkbox" data-g="pics" ${g.pics ? 'checked' : ''}> Show card pictures</label>
+        <label class="switch"><input type="checkbox" data-g="pics" ${g.pics ? 'checked' : ''}> Card pictures</label>
         <label class="switch"><input type="checkbox" data-g="skipBlank" ${g.skipBlank ? 'checked' : ''}> Skip blank pages</label>
         <span class="grow"></span>
-        <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>🖨 Print sleeving guide</button>
+        <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>🖨 Print</button>
       </div>
-      <p class="intro">Print it and fill one binder page at a time, left to right. Tick each box as the card goes in. Dashed boxes: <b>leave that pocket empty</b> for now.</p>
+      <p class="intro">Laid out like your open binder. Work one spread at a time, left page then right page, top row first.</p>
     </div>
-    <div class="printhead"><h1>${esc(b.name)}</h1><div>Sleeving guide<br>${b.pockets}-pocket · ${b.pages} pages · ${new Date().toLocaleDateString()}</div></div>`;
+    <div class="printhead"><h1>${esc(b.name)}</h1><div>Sleeving guide · ${b.pockets}-pocket · ${b.pages} pages<br>${toSleeve} to sleeve · ${cards.length - cards.filter(c => c.own).length} pockets left empty · ${new Date().toLocaleDateString()}</div></div>`;
   if (!total) { $('#main').innerHTML = h + `<div class="empty-state"><h2>Nothing to sleeve yet</h2><p class="muted">Add cards to your binder first.</p></div>`; return; }
-  h += `<div class="gpages">`;
-  for (let s = 0; s < total; s++) {
-    if (s === L.capSides) h += `<h2 class="gsec-h">These don't fit in the binder yet</h2>`;
-    const row = map[s] || {};
-    const isFull = L.fullSides[s] !== undefined;
-    if (!isFull && !Object.keys(row).length && g.skipBlank) continue;
-    const w = sideWords(b, s);
-    let cells = '';
-    if (isFull) {
-      const it = b.items[L.fullSides[s]];
-      cells = `<div class="gcell full" style="border-left:8px solid ${esc(it.color)}"><span class="tick"></span><b>Title page</b>${esc(it.text)}<span class="muted">Fill all ${b.pockets} pockets with your title insert</span></div>`;
-    } else {
-      for (let k = 0; k < b.pockets; k++) {
-        const i = row[k];
-        if (i === undefined) { cells += `<div class="gcell unused">—</div>`; continue; }
-        const it = b.items[i];
-        if (it.k === 'card') {
-          cells += it.own
-            ? `<div class="gcell"><span class="tick"></span>${g.pics && it.img ? `<div class="gimg"><img src="${esc(it.img)}" alt="" onerror="this.parentNode.remove()"></div>` : ''}<b>${esc(it.name)}</b><span class="n">#${esc(it.num)}</span><span class="muted">${esc(it.setName || '')}</span></div>`
-            : `<div class="gcell leave"><b>Leave empty</b>for ${esc(it.name)}<span class="n">#${esc(it.num)}</span><span>${esc(it.setName || '')}</span></div>`;
-        } else if (it.k === 'empty') cells += `<div class="gcell leave"><b>Leave empty</b></div>`;
-        else if (it.k === 'energy') cells += `<div class="gcell" style="border-left:6px solid ${ENERGY_COLOR[it.type]}"><span class="tick"></span><b>${esc(it.type)}</b>Energy</div>`;
-        else if (it.k === 'title') cells += `<div class="gcell" style="border-left:6px solid ${esc(it.color)}"><span class="tick"></span><b>Title card</b>${esc(it.text)}</div>`;
-      }
+  const blank = s => L.fullSides[s] === undefined && !Object.keys(map[s] || {}).length;
+  const cell = i => {
+    const it = b.items[i];
+    if (it.k === 'card') {
+      const pic = g.pics && it.img ? `<img src="${esc(it.img)}" alt="" onerror="this.remove()">` : '';
+      return `<div class="gc ${it.own ? 'go' : 'skip'}${pic ? '' : ' nopic'}">${pic}${it.own ? '<i class="tick"></i>' : ''}<span class="cap"><span class="n">#${esc(it.num)}</span> ${esc(it.name)}</span></div>`;
     }
-    h += `<section class="gpage"><h3>${w.label} <small>${w.lr ? w.lr + ' · ' : ''}${w.sheet}</small></h3><div class="ggrid" style="--cols:${cols}">${cells}</div></section>`;
+    if (it.k === 'empty') return `<div class="gc skip nopic"><span class="cap">empty</span></div>`;
+    if (it.k === 'energy') return `<div class="gc go nopic" style="background:${ENERGY_COLOR[it.type]}"><i class="tick"></i><span class="cap light">${esc(it.type)} Energy</span></div>`;
+    if (it.k === 'title') return `<div class="gc go nopic" style="background:${esc(it.color)}"><i class="tick"></i><span class="cap light">${esc(it.text || 'Title')}</span></div>`;
+    return '';
+  };
+  const pageBlock = s => {
+    if (s < 0) return `<div class="gpg gcover"><span>inside<br>front cover</span></div>`;
+    if (s >= total) return `<div class="gpg gcover"><span>inside<br>back cover</span></div>`;
+    const w = sideWords(b, s);
+    let grid = '';
+    if (L.fullSides[s] !== undefined) {
+      const it = b.items[L.fullSides[s]];
+      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>whole-page title</small></span></div></div>`;
+    } else {
+      const row = map[s] || {};
+      for (let k = 0; k < b.pockets; k++) grid += row[k] !== undefined ? cell(row[k]) : `<div class="gc unused"></div>`;
+      grid = `<div class="ggrid" style="--cols:${cols}">${grid}</div>`;
+    }
+    return `<div class="gpg${s >= L.capSides ? ' over' : ''}"><div class="lbl"><b>Page ${s + 1}</b><span>${w.lr || ''}</span></div>${grid}</div>`;
+  };
+  const groups = [];
+  if (b.spreads) { groups.push([-1, 0]); for (let s = 1; s < total; s += 2) groups.push([s, s + 1]); }
+  else for (let s = 0; s < total; s += 2) groups.push([s, s + 1 < total ? s + 1 : null]);
+  h += legend + `<div class="gspreads">`;
+  let warned = false;
+  for (const [l, r] of groups) {
+    const ls = l !== null && l >= 0 && l < total ? l : null, rs = r !== null && r < total ? r : null;
+    if (g.skipBlank && (ls === null || blank(ls)) && (rs === null || blank(rs))) continue;
+    if (!warned && Math.max(ls ?? -1, rs ?? -1) >= L.capSides) { h += `<h2 class="gsec-h">These pages don't fit in the binder yet</h2>`; warned = true; }
+    const title = b.spreads ? (l < 0 ? 'Page 1' : rs !== null ? `Pages ${l + 1}–${r + 1}` : `Page ${l + 1}`) : (rs !== null ? `Pages ${l + 1}–${r + 1}` : `Page ${l + 1}`);
+    const left = b.spreads ? pageBlock(l) : pageBlock(l), right = r === null ? '<div class="gpg"></div>' : pageBlock(r);
+    h += `<section class="gspread"><h3>${title}${b.spreads ? ' <small>open spread</small>' : ''}</h3><div class="gpair">${left}${right}</div></section>`;
   }
   $('#main').innerHTML = h + `</div>`;
 }
@@ -1887,7 +1953,7 @@ $('#main').addEventListener('click', e => {
   if (d.act === 'showall') { store.showAll = true; return commit(); }
   if (d.act === 'showless') { store.showAll = false; return commit(); }
   if (d.tap) { store.tapMode = d.tap; return commit(); }
-  if (d.zoom) { store.zoom = Math.max(0.6, Math.min(1.8, Math.round((store.zoom + d.zoom * 0.2) * 10) / 10)); return commit(); }
+  if (d.zoom) return zoomBy(+d.zoom);
   if (d.insert) return openAdd(d.insert);
   if (d.ownAll) {
     const its = b.items.filter(x => x.sec === d.ownAll && x.k === 'card'), all = its.every(x => x.own);
