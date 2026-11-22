@@ -291,8 +291,20 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .ins-whole .cuts{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);pointer-events:none}
 .ins-whole .cuts i{border:0.5px dashed rgba(255,255,255,.75);outline:0.5px dashed rgba(0,0,0,.35);outline-offset:-1px;font:600 11px var(--mono);color:#fff;text-shadow:0 1px 2px #000;padding:3px 5px;font-style:normal}
 .ins-edit{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start}
+.saved{display:flex;flex-direction:column;gap:6px;width:100%;max-width:520px;align-self:center}
+.saved h3{margin:0;font:700 13px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:8px}
+.saved h3 .pro{font-size:10px;letter-spacing:.08em;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF);color:#15232B}
+.saved-row{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x proximity}
+.sv{flex:none;width:84px;display:flex;flex-direction:column;gap:4px;align-items:center;scroll-snap-align:start;position:relative}
+.sv button.use{border:0;padding:0;background:none;border-radius:5px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25);width:84px;aspect-ratio:5/7;display:block}
+.sv button.use img{width:100%;height:100%;display:block;object-fit:cover}
+.sv .nm{font:600 11px var(--body);text-align:center;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv .badge{position:absolute;top:4px;left:4px;font:700 9px var(--body);text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(0,0,0,.7);color:#fff;pointer-events:none}
+.sv .more{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:1;padding:0}
+.saved .hint{font-size:12px;color:var(--muted);margin:0}
+.ie-btns{display:flex;gap:8px;flex-wrap:wrap}
 .opt{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500;opacity:.7;margin-left:4px}
-#ieRandom{align-self:flex-start}
+
 @media(max-width:600px){.ins-edit{grid-template-columns:1fr}.ins-edit .ins-canvas-wrap{position:sticky;top:-16px;z-index:3;background:var(--bg);padding:8px 0 10px;margin:-8px 0 0;flex-direction:row;align-items:flex-start;gap:12px;border-bottom:1px solid var(--line)}.ie-tools #ieHint{font-size:12px}.ins-edit .ins-canvas-wrap canvas{width:min(38vw,150px);flex:none}}
 .ins-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
 .ie-tools{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;width:100%}
@@ -1362,9 +1374,12 @@ let ins = (() => {
   try { const d = JSON.parse(localStorage.getItem(INS_KEY)); if (d && Array.isArray(d.slots) && d.slots.length === 9) return d; } catch (e) {}
   return { slots: Array.from({ length: 9 }, blankSlot) };
 })();
+const resetSlot = sl => { const id = sl.id, grid = sl.grid; Object.keys(sl).forEach(k => delete sl[k]); Object.assign(sl, grid ? pageSlot(grid) : blankSlot(), { id }); };   // wipe everything, keep the id
 const pageSlot = (grid = 9) => ({ ...blankSlot(), textPos: 'middle', grid });
-const insAll = () => [...ins.slots, ...(ins.page ? [ins.page] : [])];   // every design, for pictures and sync
-const insSig = d => [d ? d.slots : null, d && d.page || null, d && d.mode || 'cards'];
+const insWorking = () => [...ins.slots, ...(ins.page ? [ins.page] : [])];   // what's on the sheet / page now
+const savedSlots = () => (ins.saved || []).flatMap(x => x.kind === 'sheet' ? x.slots : [x.design]);
+const insAll = () => [...insWorking(), ...savedSlots()];   // every design, for pictures and sync
+const insSig = d => [d ? d.slots : null, d && d.page || null, d && d.mode || 'cards', (d && d.saved || []).map(x => x.id + x.name)];
 const saveInsLocal = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
 const saveIns = () => { saveInsLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); };
 
@@ -1860,6 +1875,108 @@ async function paintSlotCanvas(canvas, slot) {
 }
 const slotEmpty = s => !s.hasImg && !(s.text || '').trim() && !(s.sub || '').trim();
 
+/* ---------- Pro (one-time unlock; not for sale yet) ---------- */
+const PRO_KEY = 'binderBlueprint.proPreview';
+try { const q = new URLSearchParams(location.search).get('pro'); if (q === 'preview') localStorage.setItem(PRO_KEY, '1'); if (q === 'off') localStorage.removeItem(PRO_KEY); } catch (e) {}
+const isPro = () => { try { return localStorage.getItem(PRO_KEY) === '1'; } catch (e) { return false; } };
+const FREE_SAVES = 3, MAX_SAVES = 60;
+function proPitch(why) {
+  openModal(`<div class="mhead"><h2>✨ ${why}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p>Binder Blueprint Pro is a one-time unlock, about $4. No ads and no subscription, ever.</p>
+    <ul class="small" style="margin:0;padding-left:20px;line-height:1.6"><li>Save as many card designs as you like</li><li>Save whole sheets of 9 cards to reprint later</li><li>More Pro extras as they come</li></ul>
+    <p class="muted small">Pro isn't available to buy yet. It's coming soon. Free accounts keep ${FREE_SAVES} saved designs.</p>
+    <div class="mfoot"><button class="btn primary" data-close>OK</button></div>`);
+}
+
+/* ---------- saved designs ---------- */
+function designThumb(sl, w = 150) {
+  const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * 1.4);
+  return Promise.all([slotImage(sl), fontReady(sl)]).then(([img]) => { drawInsert(c.getContext('2d'), sl, c.width, c.height, img); return c.toDataURL('image/jpeg', 0.8); });
+}
+async function sheetThumb(slots) {
+  const c = document.createElement('canvas'); c.width = 150; c.height = 210; const x = c.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 150, 210);
+  for (let k = 0; k < 9; k++) {
+    const sl = slots[k], cx = 4 + (k % 3) * 48, cy = 4 + Math.floor(k / 3) * 68;
+    if (!sl || slotEmpty(sl)) { x.fillStyle = '#E4E9EC'; x.fillRect(cx, cy, 46, 64); continue; }
+    const [img] = await Promise.all([slotImage(sl), fontReady(sl)]);
+    const t = document.createElement('canvas'); t.width = 92; t.height = 128; drawInsert(t.getContext('2d'), sl, 92, 128, img);
+    x.drawImage(t, cx, cy, 46, 64);
+  }
+  return c.toDataURL('image/jpeg', 0.8);
+}
+async function snapshot(sl) {   // a copy of a design with its own copy of the picture
+  const d = { id: uid() };
+  await copyDesign(sl, d);
+  if (sl.grid) d.grid = sl.grid;
+  return d;
+}
+const designCount = () => (ins.saved || []).filter(x => x.kind !== 'sheet').length;
+function askName(title, value, fn) {
+  const m = openModal(`<div class="mhead"><h2>${title}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <label class="field"><span>Name</span><input class="inp" id="svName" maxlength="30" value="${esc(value)}" enterkeyhint="done" autocomplete="off"></label>
+    <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="svOK">Save</button></div>`);
+  const inp = $('#svName', m), ok = () => { const v = inp.value.trim() || value || 'My design'; closeModal(); fn(v); };
+  $('#svOK', m).onclick = ok; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } };
+  setTimeout(() => { inp.focus(); inp.select(); }, 50);
+}
+function saveDesign(sl, after) {
+  if ((ins.saved || []).length >= MAX_SAVES) return toast(`You can keep up to ${MAX_SAVES} saved designs. Delete one first.`);
+  if (!isPro() && designCount() >= FREE_SAVES) return proPitch('Save more designs with Pro');
+  const name = [(sl.text || '').trim(), (sl.sub || '').trim()].filter(Boolean).join(' · ') || 'My design';
+  askName('Save design', name.slice(0, 30), async nm => {
+    const design = await snapshot(sl);
+    (ins.saved ??= []).unshift({ id: uid(), name: nm, kind: sl.grid ? 'page' : 'card', design, thumb: await designThumb(design) });
+    saveIns(); after?.(); render();
+    toast(isPro() ? `Saved “${nm}”.` : `Saved “${nm}”. ${FREE_SAVES - designCount()} free saves left.`);
+  });
+}
+function saveSheet() {
+  if (!isPro()) return proPitch('Save whole sheets with Pro');
+  if ((ins.saved || []).length >= MAX_SAVES) return toast(`You can keep up to ${MAX_SAVES} saved designs. Delete one first.`);
+  askName('Save this sheet', 'My sheet', async nm => {
+    const slots = []; for (const sl of ins.slots) slots.push(slotEmpty(sl) ? { ...blankSlot() } : await snapshot(sl));
+    (ins.saved ??= []).unshift({ id: uid(), name: nm, kind: 'sheet', slots, thumb: await sheetThumb(slots) });
+    saveIns(); render(); toast(`Saved the sheet “${nm}”.`);
+  });
+}
+async function useSaved(id) {
+  const sv = (ins.saved || []).find(x => x.id === id); if (!sv) return;
+  if (sv.kind === 'sheet') {
+    const go_ = async () => {
+      for (const s of ins.slots) { if (s.hasImg) Sync.pictureChanged(s.id, true); await imgDB.del(s.id); delete imgEls[s.id]; }
+      ins.slots = []; for (const d of sv.slots) { const sl = blankSlot(); if (!slotEmpty(d)) await copyDesign(d, sl); ins.slots.push(sl); }
+      ins.mode = 'cards'; saveIns(); render(); toast(`Loaded “${sv.name}”.`);
+    };
+    return ins.slots.some(x => !slotEmpty(x)) ? confirmBox('Replace your sheet?', `Load <b>${esc(sv.name)}</b> in place of the cards on your sheet now?`, 'Replace', go_) : go_();
+  }
+  if (ins.mode === 'page') {
+    const go_ = async () => { const sl = ins.page; if (sl.hasImg) { Sync.pictureChanged(sl.id, true); await imgDB.del(sl.id); delete imgEls[sl.id]; } const grid = sl.grid; await copyDesign(sv.design, sl); sl.grid = grid; saveIns(); render(); toast(`Used “${sv.name}” on the page.`); };
+    return !slotEmpty(ins.page) ? confirmBox('Replace your page design?', `Use <b>${esc(sv.name)}</b> in place of your page design?`, 'Replace', go_) : go_();
+  }
+  const sl = ins.slots.find(slotEmpty); if (!sl) return toast('All 9 cards are in use. Clear one first.');
+  await copyDesign(sv.design, sl); saveIns(); render();
+  toast(`Added “${sv.name}” to card ${ins.slots.indexOf(sl) + 1}. Tap it to change the words.`);
+}
+function savedMenu(id) {
+  const sv = (ins.saved || []).find(x => x.id === id); if (!sv) return;
+  const m = openModal(`<div class="mhead"><h2>${esc(sv.name)}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="ie-btns"><button class="btn" id="svUse">${sv.kind === 'sheet' ? 'Load this sheet' : ins.mode === 'page' ? 'Use on the page' : 'Add to the sheet'}</button><button class="btn" id="svRen">Rename</button><button class="btn danger" id="svDel">Delete</button></div>`);
+  $('#svUse', m).onclick = () => { closeModal(); useSaved(id); };
+  $('#svRen', m).onclick = () => { closeModal(); askName('Rename', sv.name, nm => { sv.name = nm; saveIns(); render(); }); };
+  $('#svDel', m).onclick = () => { closeModal(); confirmBox('Delete saved design?', `Delete <b>${esc(sv.name)}</b>? Cards you already made from it stay.`, 'Delete', async () => {
+    for (const d of sv.kind === 'sheet' ? sv.slots : [sv.design]) if (d.hasImg) { Sync.pictureChanged(d.id, true); await imgDB.del(d.id); }
+    ins.saved = ins.saved.filter(x => x.id !== id); saveIns(); render();
+  }); };
+}
+function savedStrip() {
+  const list = ins.saved || [], pro = isPro();
+  return `<div class="saved"><h3>My designs ${pro ? '<span class="pro">PRO</span>' : `<span style="font-weight:600;text-transform:none;letter-spacing:0">${designCount()} of ${FREE_SAVES} free</span>`}</h3>
+    ${list.length ? `<div class="saved-row">${list.map(x => `<div class="sv"><button class="use" data-sv="${x.id}" aria-label="Use ${esc(x.name)}"><img src="${x.thumb}" alt=""></button>${x.kind === 'sheet' ? '<span class="badge">Sheet</span>' : x.kind === 'page' ? '<span class="badge">Page</span>' : ''}<button class="more" data-svm="${x.id}" aria-label="More for ${esc(x.name)}">⋯</button><span class="nm">${esc(x.name)}</span></div>`).join('')}</div>`
+      : `<p class="hint">Save a card's look from its editor (☆ Save design) to reuse it any time${pro ? ', or save the whole sheet' : ''}.</p>`}
+  </div>`;
+}
+
 /* ---------- random designs ---------- */
 const RANDOM_TITLES = ['My Collection', 'Rare Finds', 'Shiny Hunters', 'Holo Heaven', 'Trade Binder', 'Favorites', 'Full Arts', 'Secret Rares', 'Dream Team', 'Starter Squad',
   'Legends', 'Wish List', 'Best Pulls', 'Family Binder', 'Duplicates', 'Big Hits', 'Fan Favorites', 'Hall of Fame', 'Treasure Chest', 'Mystery Pulls', 'The Vault',
@@ -1887,6 +2004,21 @@ function randomDesign(slot, { words = true } = {}) {
     decoPlace: pick(['corners', 'above', 'above', 'scatter']),
     pid: uid(),   // new pattern layout
   });
+  slot.randSig = designSig(slot);
+}
+const designSig = sl => JSON.stringify(DESIGN_KEYS.map(k => sl[k] ?? null));
+const madeByHand = sl => !slotEmpty(sl) && designSig(sl) !== sl.randSig;   // anything other than an untouched random roll
+const isSavedDesign = sl => (ins.saved || []).some(x => x.kind !== 'sheet' && designSig(x.design) === designSig(sl));
+function confirmRandom(sl, roll, back) {
+  if (!madeByHand(sl)) return roll();
+  const keepWords = !wordsAreRandom(sl), saved = isSavedDesign(sl), what = sl.grid ? 'page design' : 'card';
+  const m = openModal(`<div class="mhead"><h2>Try a new look?</h2></div>
+    <p>You've made changes to this ${what}. Surprise me will change its colors, styles and decorations${keepWords ? ', but your words stay' : ''}.</p>
+    ${saved ? '<p class="muted small">This design is already in My designs.</p>' : ''}
+    <div class="mfoot"><button class="btn ghost" id="rCancel">Cancel</button>${saved ? '' : '<button class="btn" id="rSave">☆ Save first</button>'}<button class="btn primary" id="rGo">🎲 Surprise me</button></div>`);
+  $('#rCancel', m).onclick = () => { closeModal(); back?.(); };
+  $('#rGo', m).onclick = () => { closeModal(); roll(); };
+  $('#rSave', m) && ($('#rSave', m).onclick = () => { closeModal(); saveDesign(sl, roll); });
 }
 // a design is "still random" if its words are the ones we made up (so Surprise me may change them)
 const wordsAreRandom = sl => !(sl.text || '').trim() || sl.randWords === (sl.text || '') + '|' + (sl.sub || '');
@@ -1901,10 +2033,11 @@ function renderInserts() {
     <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
       <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
-      <button class="btn" data-ins-act="random" ${ins.slots.some(slotEmpty) ? '' : 'disabled'}>🎲 Random card</button>
+      <button class="btn" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>☆ Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
       <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
       <button class="btn ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear</button>
     </div>
+    ${savedStrip()}
     <div class="ins-sheet">${ins.slots.map((s, k) => `<button class="ins-slot ${slotEmpty(s) ? 'empty' : ''}" data-slot="${k}" aria-label="Card ${k + 1}">
         ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas>`}</button>`).join('')}</div>
     <p class="intro">Tap a card to crop its picture, add a title or a set-colored border. Up to 9 cards print on one letter sheet, each exactly 2.5 × 3.5 in, with cut lines. When printing, choose <b>Actual size / 100%</b>.</p>
@@ -1924,6 +2057,7 @@ function renderWholePage(modeSeg) {
       <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>🖨 Print ${c * r} pieces</button>
       <button class="btn ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear</button>
     </div>
+    ${savedStrip()}
     <button class="ins-whole ${empty ? 'empty' : ''}" data-slot="page" style="--ar:${c * 5}/${r * 7};--ww:${r > c ? 340 : 420}px" aria-label="Whole-page design">
       ${empty ? '<span>＋ Tap to design one big title page</span>' : `<canvas width="${c * 200}" height="${r * 280}"></canvas>`}
       <span class="cuts" style="--c:${c};--r:${r}">${Array.from({ length: c * r }, (_, k) => `<i>${k + 1}</i>`).join('')}</span></button>
@@ -1968,7 +2102,7 @@ function openInsertEditor(k) {
         </div>
       </div>
       <div class="ins-controls">
-        <button class="btn sm" id="ieRandom" type="button">🎲 Surprise me</button>
+        <div class="ie-btns"><button class="btn sm" id="ieRandom" type="button">🎲 Surprise me</button><button class="btn sm" id="ieSave" type="button">☆ Save design</button></div>
         <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
           <button class="btn sm" id="ieUseSet" hidden></button></div>
         <label class="field"><span>Second line <em class="opt">optional</em></span><input class="inp" id="ieSub" maxlength="40" value="${esc(slot.sub || '')}" placeholder="Like “Master set”, “Binder 2” or a year" autocomplete="off" enterkeyhint="done"></label>
@@ -2017,9 +2151,11 @@ function openInsertEditor(k) {
   $('#ieText', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
   $('#ieSub', m).oninput = e => { slot.sub = e.target.value; changed(); };
   $('#ieSub', m).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } };
+  $('#ieSave', m).onclick = () => { if (slotEmpty(slot)) return toast('Add a title or picture first.'); saveDesign(slot, () => openInsertEditor(k)); };
   $('#ieRandom', m).onclick = () => {   // keeps words you typed; only rolls words it made up itself
-    const sc = m.scrollTop; randomDesign(slot, { words: wordsAreRandom(slot) }); saveIns();
-    openInsertEditor(k); render(); const nm = document.querySelector('.modal'); if (nm) nm.scrollTop = sc;
+    const sc = m.scrollTop;
+    const reopen = () => { openInsertEditor(k); render(); const nm = document.querySelector('.modal'); if (nm) nm.scrollTop = sc; };
+    confirmRandom(slot, () => { randomDesign(slot, { words: wordsAreRandom(slot) }); saveIns(); reopen(); }, reopen);
   };
   offerSet();
   $$('#ieFont button', m).forEach(b => b.onclick = () => { slot.font = b.dataset.f; $$('#ieFont button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
@@ -2035,7 +2171,7 @@ function openInsertEditor(k) {
   $$('#iePat button', m).forEach(b => b.onclick = () => { slot.pattern = b.dataset.pt; $$('#iePat button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieDeco button', m).forEach(b => b.onclick = () => { slot.deco = b.dataset.dc; if (slot.deco && !slot.decoPlace) slot.decoPlace = 'corners'; $$('#ieDeco button', m).forEach(x => x.classList.toggle('on', x === b)); $('#iePlaceF', m).hidden = !slot.deco; changed(); });
   $$('#iePlace button', m).forEach(b => b.onclick = () => { slot.decoPlace = b.dataset.pl; $$('#iePlace button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
-  $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, whole ? pageSlot(slot.grid) : blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
+  $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; resetSlot(slot); saveIns(); closeModal(); render(); };
   if (!slot.hasImg) return;
   const zoom = $('#ieZoom', m);
   $('#ieRot', m).onclick = () => { slot.rot = (slot.rot + 90) % 360; changed(); };
@@ -2114,6 +2250,7 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 const DESIGN_KEYS = ['text', 'sub', 'textPos', 'bg', 'border', 'font', 'tsize', 'pattern', 'deco', 'decoPlace', 'tstyle', 'hasImg', 'x', 'y', 'z', 'rot'];
 async function copyDesign(from, to) {
   DESIGN_KEYS.forEach(k => { if (k in from) to[k] = from[k]; else delete to[k]; });
+  to.pid = from.pid || from.id;   // same pattern layout as the original
   if (from.hasImg) {
     const data = await imgDB.get(from.id);
     if (data) { await imgDB.set(to.id, data); delete imgEls[to.id]; Sync.pictureChanged(to.id); } else to.hasImg = false;
@@ -2152,15 +2289,13 @@ $('#main').addEventListener('click', e => {
     if (md.dataset.g) { ins.page ??= pageSlot(); ins.page.grid = +md.dataset.g; }
     saveIns(); return render();
   }
+  const sv = e.target.closest('[data-sv],[data-svm]');
+  if (sv) return sv.dataset.svm ? savedMenu(sv.dataset.svm) : useSaved(sv.dataset.sv);
   const t = e.target.closest('[data-slot],[data-ins-act]'); if (!t) return;
   if (t.dataset.slot !== undefined) return openInsertEditor(t.dataset.slot === 'page' ? 'page' : +t.dataset.slot);
   if (t.dataset.insAct === 'print') return printInserts();
-  if (t.dataset.insAct === 'random') {
-    if (ins.mode === 'page') { randomDesign(ins.page, { words: wordsAreRandom(ins.page) }); saveIns(); return render(); }
-    const sl = ins.slots.find(slotEmpty); if (!sl) return;
-    randomDesign(sl); saveIns(); render();
-    return toast(`Made “${sl.text}”. Tap it to change anything, or roll again.`);
-  }
+  if (t.dataset.insAct === 'savesheet') return saveSheet();
+  if (t.dataset.insAct === 'random') return confirmRandom(ins.page, () => { randomDesign(ins.page, { words: wordsAreRandom(ins.page) }); saveIns(); render(); });
   if (t.dataset.insAct === 'clear' && ins.mode === 'page') return confirmBox('Clear the page design?', 'Remove the whole-page design and its picture?', 'Clear', async () => {
     const sl = ins.page; if (sl.hasImg) Sync.pictureChanged(sl.id, true); await imgDB.del(sl.id); delete imgEls[sl.id];
     ins.page = { ...pageSlot(sl.grid), id: sl.id }; saveIns(); render();
@@ -2315,11 +2450,14 @@ const Sync = {
           const mem = new Map((acc.members || []).map(x => [x.id, x]));
           if (!unchanged) (store.members || []).forEach(x => { if (!mem.has(x.id)) mem.set(x.id, x); });   // first sign-in: keep both
           store.members = [...mem.values()];
-          if (acc.inserts && (unchanged || insAll().every(slotEmpty))) { ins = acc.inserts; saveInsLocal(); }
+          if (acc.inserts && (unchanged || (insWorking().every(slotEmpty) && !(ins.saved || []).length))) { ins = acc.inserts; saveInsLocal(); }
         } else {
           const mem = new Map((acc.members || []).map(x => [x.id, x]));
           (store.members || []).forEach(x => mem.set(x.id, x));
           store.members = [...mem.values()];
+          const have = new Set((ins.saved || []).map(x => x.id));   // keep designs saved on the other device too
+          const extra = (acc.inserts?.saved || []).filter(x => !have.has(x.id));
+          if (extra.length) { ins.saved = [...(ins.saved || []), ...extra]; saveInsLocal(); }
         }
         this.meta.account = { v: acc.version, sig: hashStr(JSON.stringify([acc.members || [], ...insSig(acc.inserts)])) };
         changed = true;
