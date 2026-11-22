@@ -284,6 +284,12 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .ins-slot{aspect-ratio:5/7;border:1px dashed #b8c2c9;border-radius:4px;background:#f3f5f6;padding:0;overflow:hidden;display:grid;place-items:center;color:#8a97a0;font-size:28px}
 .ins-slot:not(.empty){border-style:solid;border-color:#d0d7dc}
 .ins-slot canvas{width:100%;height:100%;display:block}
+.ins-mode{display:flex;flex-direction:column;gap:8px;align-items:center}
+.ins-whole{position:relative;align-self:center;width:min(100%,var(--ww,420px));aspect-ratio:var(--ar);border:0;padding:0;background:#f3f5f6;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.18);display:grid;place-items:center;color:#8a97a0;font-size:15px;font-weight:600}
+.ins-whole.empty{border:1.5px dashed #b8c2c9;box-shadow:none}
+.ins-whole canvas{position:absolute;inset:0;width:100%;height:100%}
+.ins-whole .cuts{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);pointer-events:none}
+.ins-whole .cuts i{border:0.5px dashed rgba(255,255,255,.75);outline:0.5px dashed rgba(0,0,0,.35);outline-offset:-1px;font:600 11px var(--mono);color:#fff;text-shadow:0 1px 2px #000;padding:3px 5px;font-style:normal}
 .ins-edit{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start}
 @media(max-width:600px){.ins-edit{grid-template-columns:1fr}.ins-edit .ins-canvas-wrap{position:sticky;top:-16px;z-index:3;background:var(--bg);padding:8px 0 10px;margin:-8px 0 0;flex-direction:row;align-items:flex-start;gap:12px;border-bottom:1px solid var(--line)}.ie-tools #ieHint{font-size:12px}.ins-edit .ins-canvas-wrap canvas{width:min(38vw,150px);flex:none}}
 .ins-canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -1354,6 +1360,9 @@ let ins = (() => {
   try { const d = JSON.parse(localStorage.getItem(INS_KEY)); if (d && Array.isArray(d.slots) && d.slots.length === 9) return d; } catch (e) {}
   return { slots: Array.from({ length: 9 }, blankSlot) };
 })();
+const pageSlot = (grid = 9) => ({ ...blankSlot(), textPos: 'middle', grid });
+const insAll = () => [...ins.slots, ...(ins.page ? [ins.page] : [])];   // every design, for pictures and sync
+const insSig = d => [d ? d.slots : null, d && d.page || null, d && d.mode || 'cards'];
 const saveInsLocal = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
 const saveIns = () => { saveInsLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); };
 
@@ -1382,12 +1391,12 @@ async function slotImage(slot) {
   return new Promise(res => { const im = new Image(); im.onload = () => res(imgEls[slot.id] = im); im.onerror = () => res(null); im.src = src; });
 }
 /* Shrink a photo to at most 2000px so it stays light but prints sharp. */
-function readPicture(file) {
+function readPicture(file, max = 2000) {
   return new Promise((res, rej) => {
     if (!/^image\//.test(file.type)) return rej(new Error('not an image'));
     const url = URL.createObjectURL(file), im = new Image();
     im.onload = () => {
-      const k = Math.min(1, 2000 / Math.max(im.width, im.height));
+      const k = Math.min(1, max / Math.max(im.width, im.height));
       const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
@@ -1398,7 +1407,7 @@ function readPicture(file) {
   });
 }
 async function setSlotPicture(slot, file) {
-  const data = await readPicture(file);
+  const data = await readPicture(file, slot.grid ? 3200 : 2000);   // whole-page designs print 3× bigger
   await imgDB.set(slot.id, data); delete imgEls[slot.id];
   Sync.pictureChanged(slot.id);
   Object.assign(slot, { hasImg: true, x: 0, y: 0, z: 1, rot: 0 });
@@ -1802,8 +1811,12 @@ const slotEmpty = s => !s.hasImg && !(s.text || '').trim();
 
 /* ---------- the sheet ---------- */
 function renderInserts() {
+  const whole = ins.mode === 'page';
+  const modeSeg = `<div class="seg" id="insMode"><button data-m="cards" class="${whole ? '' : 'on'}">Separate cards</button><button data-m="page" class="${whole ? 'on' : ''}">One whole-page design</button></div>`;
+  if (whole) return renderWholePage(modeSeg);
   const filled = ins.slots.filter(s => !slotEmpty(s)).length;
   $('#main').innerHTML = `
+    <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
       <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
       <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
@@ -1815,7 +1828,31 @@ function renderInserts() {
     <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
   $$('.ins-slot canvas').forEach(c => paintSlotCanvas(c, ins.slots[+c.parentNode.dataset.slot]));
 }
+const pageGrid = sl => GRID[sl.grid] || GRID[9];
+function renderWholePage(modeSeg) {
+  ins.page ??= pageSlot();
+  const sl = ins.page, [c, r] = pageGrid(sl), empty = slotEmpty(sl);
+  $('#main').innerHTML = `
+    <div class="ins-mode">${modeSeg}
+      <div class="seg" id="insGrid">${[[9, '9-pocket'], [4, '4-pocket'], [12, '12-pocket']].map(([n, l]) => `<button data-g="${n}" class="${sl.grid === n ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="ins-top">
+      <label class="btn primary filebtn">${sl.hasImg ? 'Change picture' : '＋ Add a picture'}<input type="file" accept="image/*" id="insFiles"></label>
+      <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>🖨 Print ${c * r} pieces</button>
+      <button class="btn ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear</button>
+    </div>
+    <button class="ins-whole ${empty ? 'empty' : ''}" data-slot="page" style="--ar:${c * 5}/${r * 7};--ww:${r > c ? 340 : 420}px" aria-label="Whole-page design">
+      ${empty ? '<span>＋ Tap to design one big title page</span>' : `<canvas width="${c * 200}" height="${r * 280}"></canvas>`}
+      <span class="cuts" style="--c:${c};--r:${r}">${Array.from({ length: c * r }, (_, k) => `<i>${k + 1}</i>`).join('')}</span></button>
+    <p class="intro">One design spread across a whole binder page. It prints as ${c * r} card-sized pieces (2.5 × 3.5 in each)${c * r > 9 ? ' on 2 sheets' : ''}, laid out just like the page. Cut them apart and slide piece 1 into the top-left pocket, then go across. When printing, choose <b>Actual size / 100%</b>.</p>
+    <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
+  const cv = $('.ins-whole canvas'); if (cv) paintSlotCanvas(cv, sl);
+}
 async function addPictures(files) {
+  if (ins.mode === 'page') {
+    const f = [...files].find(f => /^image\//.test(f.type)); if (!f) return toast('That file isn’t a picture.');
+    try { await setSlotPicture(ins.page, f); } catch (e) { return toast('That picture could not be read.'); }
+    render(); return toast('Picture added. Tap the page to crop it.');
+  }
   const list = [...files].filter(f => /^image\//.test(f.type));
   if (!list.length) return toast('Those files aren’t pictures.');
   const free = ins.slots.filter(slotEmpty);   // only completely empty cards
@@ -1831,12 +1868,13 @@ async function addPictures(files) {
 
 /* ---------- the editor ---------- */
 function openInsertEditor(k) {
-  const slot = ins.slots[k];
+  const whole = k === 'page', slot = whole ? ins.page : ins.slots[k];
+  const [gc, gr] = whole ? pageGrid(slot) : [1, 1];
   const m = openModal(`
-    <div class="mhead"><h2>Card ${k + 1}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="mhead"><h2>${whole ? `Whole page · ${gc * gr} pieces` : `Card ${k + 1}`}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
     <div class="ins-edit">
       <div class="ins-canvas-wrap">
-        <canvas id="ieCanvas" width="500" height="700"></canvas>
+        <canvas id="ieCanvas" width="${whole ? 600 : 500}" height="${whole ? Math.round(600 * gr * 7 / (gc * 5)) : 700}" style="aspect-ratio:${gc * 5}/${gr * 7}"></canvas>
         <div class="ie-tools">
           <label class="btn sm filebtn">${slot.hasImg ? 'Change picture' : '＋ Picture'}<input type="file" accept="image/*" id="ieFile"></label>
           ${slot.hasImg ? `<div class="ie-row"><button class="btn sm" id="ieRot">↻ Rotate</button><button class="btn sm" id="ieFit">Center</button></div>
@@ -1861,9 +1899,19 @@ function openInsertEditor(k) {
         <div class="field" id="iePlaceF" ${slot.deco ? '' : 'hidden'}><span>Put it</span><div class="seg" id="iePlace">${[['corners', 'In the corners'], ['above', 'One big one'], ['scatter', 'Scattered']].map(([k, n]) => `<button data-pl="${k}" class="${(slot.decoPlace || 'corners') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
       </div>
     </div>
-    <div class="mfoot"><button class="btn ghost danger" id="ieClear">Clear card</button><button class="btn primary" data-close>Done</button></div>`, true);
+    <div class="mfoot"><button class="btn ghost danger" id="ieClear">${whole ? 'Clear design' : 'Clear card'}</button><button class="btn primary" data-close>Done</button></div>`, true);
   const cv = $('#ieCanvas', m);
-  const paint = () => { paintSlotCanvas(cv, slot); };
+  const paint = () => paintSlotCanvas(cv, slot).then(() => {   // show where the cuts go
+    if (!whole) return;
+    const x = cv.getContext('2d'); x.save(); x.setLineDash([6, 5]); x.lineWidth = 1.5;
+    for (const [col, dash] of [['rgba(0,0,0,.45)', 0], ['rgba(255,255,255,.8)', 5]]) {
+      x.strokeStyle = col; x.lineDashOffset = dash; x.beginPath();
+      for (let i = 1; i < gc; i++) { x.moveTo(cv.width * i / gc, 0); x.lineTo(cv.width * i / gc, cv.height); }
+      for (let j = 1; j < gr; j++) { x.moveTo(0, cv.height * j / gr); x.lineTo(cv.width, cv.height * j / gr); }
+      x.stroke();
+    }
+    x.restore();
+  });
   const changed = () => { saveIns(); paint(); };
   paint();
   $('#ieFile', m).onchange = async e => {
@@ -1895,7 +1943,7 @@ function openInsertEditor(k) {
   $$('#iePat button', m).forEach(b => b.onclick = () => { slot.pattern = b.dataset.pt; $$('#iePat button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $$('#ieDeco button', m).forEach(b => b.onclick = () => { slot.deco = b.dataset.dc; if (slot.deco && !slot.decoPlace) slot.decoPlace = 'corners'; $$('#ieDeco button', m).forEach(x => x.classList.toggle('on', x === b)); $('#iePlaceF', m).hidden = !slot.deco; changed(); });
   $$('#iePlace button', m).forEach(b => b.onclick = () => { slot.decoPlace = b.dataset.pl; $$('#iePlace button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
-  $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
+  $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, whole ? pageSlot(slot.grid) : blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
   if (!slot.hasImg) return;
   const zoom = $('#ieZoom', m);
   $('#ieRot', m).onclick = () => { slot.rot = (slot.rot + 90) % 360; changed(); };
@@ -1923,21 +1971,42 @@ function openInsertEditor(k) {
 }
 
 /* ---------- printing: 3 × 3 at exact size with cut lines ---------- */
+async function wholePagePieces(sl) {   // the big design, cut into card-sized pieces in reading order
+  const [c, r] = pageGrid(sl), big = document.createElement('canvas');
+  big.width = CARD_W * c; big.height = CARD_H * r;
+  await fontReady(sl);
+  drawInsert(big.getContext('2d'), sl, big.width, big.height, await slotImage(sl));
+  const out = [];
+  for (let j = 0; j < r; j++) for (let i = 0; i < c; i++) {
+    const p = document.createElement('canvas'); p.width = CARD_W; p.height = CARD_H;
+    p.getContext('2d').drawImage(big, i * CARD_W, j * CARD_H, CARD_W, CARD_H, 0, 0, CARD_W, CARD_H);
+    out.push({ url: p.toDataURL('image/jpeg', 0.92), cell: (j % 3) * 3 + i, sheet: Math.floor(j / 3) });   // same spot as in the binder
+  }
+  return out;
+}
 async function printInserts() {
-  const filled = ins.slots.filter(s => !slotEmpty(s));
-  if (!filled.length) return;
   if (framed) return toast('Printing works on your own site. This preview can’t open the print window.');
-  const urls = [];
-  for (const s of filled) {
-    const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
-    await fontReady(s);
-    drawInsert(c.getContext('2d'), s, CARD_W, CARD_H, await slotImage(s));
-    urls.push(c.toDataURL('image/jpeg', 0.92));
+  let sheets;
+  if (ins.mode === 'page') {
+    if (!ins.page || slotEmpty(ins.page)) return;
+    sheets = [];
+    for (const pc of await wholePagePieces(ins.page)) { (sheets[pc.sheet] ??= Array(9).fill(null))[pc.cell] = pc.url; }
+  } else {
+    const filled = ins.slots.filter(s => !slotEmpty(s));
+    if (!filled.length) return;
+    const urls = [];
+    for (const s of filled) {
+      const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
+      await fontReady(s);
+      drawInsert(c.getContext('2d'), s, CARD_W, CARD_H, await slotImage(s));
+      urls.push(c.toDataURL('image/jpeg', 0.92));
+    }
+    sheets = [urls];
   }
   const ticks = [];
   for (const x of [0, 2.5, 5, 7.5]) ticks.push(`<i class="tick v" style="left:${0.5 + x}in;top:0"></i><i class="tick v" style="left:${0.5 + x}in;bottom:0"></i>`);
   for (const y of [0, 3.5, 7, 10.5]) ticks.push(`<i class="tick h" style="top:${0.25 + y}in;left:0"></i><i class="tick h" style="top:${0.25 + y}in;right:0"></i>`);
-  $('#ins-print').innerHTML = `<div class="ins-page"><div class="ins-grid">${urls.map(u => `<img src="${u}" alt="">`).join('')}</div>${ticks.join('')}</div>`;
+  $('#ins-print').innerHTML = sheets.map((urls, n) => `<div class="ins-page" style="${n < sheets.length - 1 ? 'break-after:page;page-break-after:always' : ''}"><div class="ins-grid">${urls.map(u => u ? `<img src="${u}" alt="">` : '<i></i>').join('')}</div>${ticks.join('')}</div>`).join('');
   await Promise.all($$('#ins-print img').map(im => im.decode?.().catch(() => {})));
   printWith('inserts');
 }
@@ -1950,6 +2019,10 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 
 /* send a binder title card to the maker */
 function titleToInsert(it) {
+  if (it.size === 'page') {
+    const go_ = () => { const id = ins.page?.id; ins.page = { ...pageSlot(GRID[cur()?.pockets] ? cur().pockets : 9), ...(id ? { id } : {}), text: it.text || 'Title', bg: it.color || '#1B2B33' }; ins.mode = 'page'; saveIns(); closeModal(); go('inserts'); toast('Made a whole-page design. Tap it to style it.'); };
+    return ins.page && !slotEmpty(ins.page) && ins.page.text !== it.text ? confirmBox('Replace your page design?', 'You already have a whole-page design. Start a new one for this title?', 'Replace', go_) : go_();
+  }
   let slot = ins.slots.find(s => slotEmpty(s));
   if (!slot) return toast('The insert sheet is full. Clear a card first.');
   Object.assign(slot, { text: it.text || 'Title', bg: it.color || '#1B2B33', textPos: 'middle' });
@@ -1960,12 +2033,22 @@ function titleToInsert(it) {
 
 $('#main').addEventListener('click', e => {
   if (tab !== 'inserts') return;
+  const md = e.target.closest('#insMode button, #insGrid button');
+  if (md) {
+    if (md.dataset.m) ins.mode = md.dataset.m;
+    if (md.dataset.g) { ins.page ??= pageSlot(); ins.page.grid = +md.dataset.g; }
+    saveIns(); return render();
+  }
   const t = e.target.closest('[data-slot],[data-ins-act]'); if (!t) return;
-  if (t.dataset.slot !== undefined) return openInsertEditor(+t.dataset.slot);
+  if (t.dataset.slot !== undefined) return openInsertEditor(t.dataset.slot === 'page' ? 'page' : +t.dataset.slot);
   if (t.dataset.insAct === 'print') return printInserts();
+  if (t.dataset.insAct === 'clear' && ins.mode === 'page') return confirmBox('Clear the page design?', 'Remove the whole-page design and its picture?', 'Clear', async () => {
+    const sl = ins.page; if (sl.hasImg) Sync.pictureChanged(sl.id, true); await imgDB.del(sl.id); delete imgEls[sl.id];
+    ins.page = { ...pageSlot(sl.grid), id: sl.id }; saveIns(); render();
+  });
   if (t.dataset.insAct === 'clear') return confirmBox('Clear the sheet?', 'Remove all 9 cards and their pictures?', 'Clear', async () => {
     for (const s of ins.slots) { if (s.hasImg) Sync.pictureChanged(s.id, true); await imgDB.del(s.id); }
-    ins = { slots: Array.from({ length: 9 }, blankSlot) }; saveIns(); render();
+    ins = { ...ins, slots: Array.from({ length: 9 }, blankSlot) }; saveIns(); render();
   });
 });
 $('#main').addEventListener('change', e => { if (tab === 'inserts' && e.target.id === 'insFiles') { addPictures(e.target.files); e.target.value = ''; } });
@@ -2052,7 +2135,7 @@ const Sync = {
     if (this.meta.uid !== uid) this.meta = { uid, binders: {}, account: null, tomb: [], pics: {} };
     this.meta.binders ??= {}; this.meta.tomb ??= []; this.meta.pics ??= {};
     // pictures already on this device go up with the account
-    ins.slots.forEach(s => { if (s.hasImg && !(s.id in this.meta.pics)) this.meta.pics[s.id] = 'up'; });
+    insAll().forEach(s => { if (s.hasImg && !(s.id in this.meta.pics)) this.meta.pics[s.id] = 'up'; });
     this.saveMeta();
     this.setStatus('syncing');
     await this.pull();
@@ -2107,19 +2190,19 @@ const Sync = {
       const { data: acc } = await this.sb.from('account_data').select('members,inserts,version').maybeSingle();
       const ma = this.meta.account;
       if (acc && (!ma || acc.version > ma.v)) {
-        const localSig = hashStr(JSON.stringify([store.members || [], ins.slots]));
+        const localSig = hashStr(JSON.stringify([store.members || [], ...insSig(ins)]));
         const unchanged = ma && localSig === ma.sig;
         if (unchanged || !ma) {
           const mem = new Map((acc.members || []).map(x => [x.id, x]));
           if (!unchanged) (store.members || []).forEach(x => { if (!mem.has(x.id)) mem.set(x.id, x); });   // first sign-in: keep both
           store.members = [...mem.values()];
-          if (acc.inserts && (unchanged || ins.slots.every(slotEmpty))) { ins = acc.inserts; saveInsLocal(); }
+          if (acc.inserts && (unchanged || insAll().every(slotEmpty))) { ins = acc.inserts; saveInsLocal(); }
         } else {
           const mem = new Map((acc.members || []).map(x => [x.id, x]));
           (store.members || []).forEach(x => mem.set(x.id, x));
           store.members = [...mem.values()];
         }
-        this.meta.account = { v: acc.version, sig: hashStr(JSON.stringify([acc.members || [], acc.inserts ? acc.inserts.slots : null])) };
+        this.meta.account = { v: acc.version, sig: hashStr(JSON.stringify([acc.members || [], ...insSig(acc.inserts)])) };
         changed = true;
       }
       this.saveMeta();
@@ -2130,7 +2213,7 @@ const Sync = {
     finally { this.busy = false; this.flushAgain(); }
   },
   async fetchPictures() {
-    for (const s of ins.slots) {
+    for (const s of insAll()) {
       if (!s.hasImg || await imgDB.get(s.id)) continue;
       const { data } = await this.sb.storage.from(PIC_BUCKET).download(`${this.user.id}/${s.id}.jpg`);
       if (!data) continue;
@@ -2191,7 +2274,7 @@ const Sync = {
   },
   async pushAccount(tries = 0) {
     const payload = { members: store.members || [], inserts: ins };
-    const sig = hashStr(JSON.stringify([payload.members, ins.slots])), m = this.meta.account;
+    const sig = hashStr(JSON.stringify([payload.members, ...insSig(ins)])), m = this.meta.account;
     if (m && m.sig === sig) return;
     if (!m) {
       const { error } = await this.sb.from('account_data').insert(payload);
@@ -2244,7 +2327,7 @@ const Sync = {
     if (navigator.onLine) await this.push();
     await this.sb.auth.signOut();
     // Leave nothing from this account on a shared device.
-    for (const s of ins.slots) await imgDB.del(s.id);
+    for (const s of insAll()) await imgDB.del(s.id);
     try { [LS_KEY, INS_KEY, SYNC_KEY].forEach(k => localStorage.removeItem(k)); } catch (e) {}
     location.replace(location.pathname + '#home'); location.reload();
   },
