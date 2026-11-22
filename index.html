@@ -1688,15 +1688,20 @@ function drawInsert(ctx, slot, W, H, img) {
   const [, fam, weight] = insFont(slot);
   if (text) {
     const maxW = W - bw * 2 - W * (style === 'banner' ? 0.4 : 0.14);   // banners need room for the ribbon tails
-    size = W * (text.length <= 8 ? 0.19 : 0.16) * (slot.tsize || 1);
-    for (;;) {   // wrap into at most 3 lines, shrinking until it fits
-      ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
-      lines = []; let line = '';
-      for (const w of text.split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
-      lines.push(line);
-      if ((lines.length <= 3 && lines.every(l => ctx.measureText(l).width <= maxW)) || size < W * 0.05) break;
-      size *= 0.92;
-    }
+    const wrap = sz => {   // lines at this size, or null if it doesn't fit (max 3 lines, never taller than 60% of the card)
+      ctx.font = `${weight} ${sz}px ${fam}, sans-serif`;
+      const out = []; let line = '';
+      for (const w of text.split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+      out.push(line);
+      return out.length <= 3 && out.length * sz * 1.12 <= H * 0.6 && out.every(l => ctx.measureText(l).width <= maxW) ? out : null;
+    };
+    let lo = W * 0.03, hi = W * 0.4;   // largest size that fits
+    if (wrap(hi)) lo = hi; else for (let k = 0; k < 18; k++) { const mid = (lo + hi) / 2; if (wrap(mid)) lo = mid; else hi = mid; }
+    const maxFit = lo, def = Math.min(W * (text.length <= 8 ? 0.19 : 0.16), maxFit), t = slot.tsize || 1;
+    // slider: left of the middle shrinks, right of the middle grows up to the largest size that fits
+    size = t <= 1 ? def * t : def + (maxFit - def) * Math.min(1, (t - 1) / 0.6);
+    lines = wrap(size) || wrap(size = maxFit) || [text];
+    ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
     lh = size * 1.12; blockH = lines.length * lh;
     const pad = bw + H * 0.06;
     top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
