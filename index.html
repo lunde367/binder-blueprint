@@ -131,9 +131,10 @@ main{display:flex;flex-direction:column;gap:14px}
 .spreads.stacked .spread{flex-direction:column;gap:20px;padding-bottom:22px}
 .spreads.stacked .page.cover{display:none}
 .zoomer{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.18);overflow:hidden}
-.zoomer button{width:48px;height:48px;border:0;background:transparent;color:var(--fg);font:700 22px var(--body);display:grid;place-items:center}
-.zoomer button + button{border-left:1px solid var(--line)}
-.zoomer button:disabled{opacity:.3;cursor:default}
+.zoomer{padding:4px;gap:4px}
+.zoomer button{height:44px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:700 13px var(--body);display:flex;align-items:center;gap:6px;padding:0 12px}
+.zoomer button svg{width:24px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.zoomer button.on{background:var(--fg);color:var(--bg)}
 .spread-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
 .spread-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 .spread{display:flex;gap:6px;background:linear-gradient(90deg,var(--binder),var(--binder-2) 50%,var(--binder));padding:12px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
@@ -417,6 +418,7 @@ function load() {
   return { binders: [], members: [], cur: null, tapMode: 'details', zoom: 1, showAll: false, guide: { pics: true, skipBlank: true } };
 }
 let store = load();
+if (!store.view) store.view = store.zoom > 1.2 ? 'one' : 'two';
 let storageOK = true;
 function saveLocal() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(store)); }
@@ -709,7 +711,7 @@ function renderBinder() {
   const lastUsed = Math.max(L.usedSides, 1);
   const showTo = store.showAll ? Math.max(L.capSides, L.usedSides) : Math.min(Math.max(lastUsed + (b.spreads && lastUsed % 2 === 0 ? 1 : 0), Math.min(2, L.capSides)), Math.max(L.capSides, lastUsed));
   const total = Math.max(showTo, 1);
-  const z = pageSize(b, store.zoom);
+  const z = pageSize(b);
   let html = statsHTML(b, L) + `<div class="toolbar">
       <div class="seg" role="group" aria-label="When I tap a card">
         <button data-tap="details" class="${store.tapMode === 'details' ? 'on' : ''}">Tap to open</button>
@@ -732,28 +734,29 @@ function renderBinder() {
   const hidden = L.capSides - total;
   if (hidden > 0) html += `<div class="more-pages"><button class="btn sm" data-act="showall">Show the ${plural(hidden, 'empty page')} left</button></div>`;
   else if (store.showAll && L.capSides > lastUsed + 1) html += `<div class="more-pages"><button class="btn sm" data-act="showless">Hide empty pages</button></div>`;
-  const k = zoomIndex(store.zoom);
-  html += `<div class="zoomer" role="group" aria-label="Page size"><button data-zoom="-1" aria-label="Smaller pages" ${k === 0 ? 'disabled' : ''}>−</button><button data-zoom="1" aria-label="Bigger pages" ${pageSize(b, ZOOMS[k + 1] || 99).pw <= z.pw + 1 ? 'disabled' : ''}>＋</button></div>`;
+  const one = store.view === 'one';
+  html += `<div class="zoomer" role="group" aria-label="How many pages across">
+    <button data-view="two" class="${one ? '' : 'on'}" aria-pressed="${!one}" title="Two pages side by side"><svg viewBox="0 0 28 20"><rect x="1" y="1" width="12" height="18" rx="2"/><rect x="15" y="1" width="12" height="18" rx="2"/></svg><span>2 pages</span></button>
+    <button data-view="one" class="${one ? 'on' : ''}" aria-pressed="${one}" title="One big page at a time"><svg viewBox="0 0 28 20"><rect x="7" y="1" width="14" height="18" rx="2"/></svg><span>1 page</span></button></div>`;
   $('#main').innerHTML = html;
 }
 /* Page size: never wider than the screen. Up to "fit" both pages sit side by side;
    bigger than that, a spread's two pages stack (left page above right page). */
-const ZOOMS = [0.6, 0.8, 1, 1.3, 1.6, 2, 2.6, 3.2];
-const zoomIndex = v => ZOOMS.reduce((best, x, i) => Math.abs(x - v) < Math.abs(ZOOMS[best] - v) ? i : best, 0);
-function pageSize(b, zoom) {
+/* Two views: both pages of a spread side by side (like the open binder),
+   or one big page at a time (left page above right page). Never wider than the screen. */
+function pageSize(b, view = store.view) {
   const avail = Math.max(200, ($('#main')?.clientWidth || innerWidth - 32) - 24);   // inside the binder's dark edge
-  const fit = b.spreads ? (avail - 6) / 2 : avail;
-  const base = Math.min(330, fit);
-  const pw = Math.floor(zoom <= 1 ? base * zoom : Math.min(base * zoom, avail));
-  return { pw, stacked: b.spreads && pw * 2 + 6 > avail, text: (pw / 190).toFixed(2) };
+  if (view === 'one') { const pw = Math.floor(Math.min(avail, 560)); return { pw, stacked: b.spreads, text: (pw / 190).toFixed(2) }; }
+  const pw = Math.floor(Math.min(330, b.spreads ? (avail - 6) / 2 : avail));
+  return { pw, stacked: false, text: (pw / 190).toFixed(2) };
 }
-function zoomBy(d) {
+function setView(v) {
+  if (store.view === v || (!store.view && v === 'two')) return;
   // keep the spread you're looking at in the same spot on screen
   const wraps = $$('#main .spread-wrap');
   const anchor = wraps.find(w => w.getBoundingClientRect().bottom > 90) || wraps[0];
   const ai = wraps.indexOf(anchor), top = anchor ? anchor.getBoundingClientRect().top : 0;
-  store.zoom = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, zoomIndex(store.zoom) + d))];
-  save(); render();
+  store.view = v; save(); render();
   const again = $$('#main .spread-wrap')[ai];
   if (again) window.scrollBy(0, again.getBoundingClientRect().top - top);
 }
@@ -947,7 +950,7 @@ function pendingItems() {
   const r = A.build && A.build();
   if (!r || !r.items.length) return null;
   const start = $('#aStart').value;
-  return { label: r.label, items: (start !== 'here' ? [{ k: 'break', to: start }] : []).concat(r.items) };
+  return { label: r.label, kind: r.kind, items: (start !== 'here' ? [{ k: 'break', to: start }] : []).concat(r.items) };
 }
 function refreshPreview() {
   const box = $('#addPreview'), go = $('#addGo'); if (!box) return;
@@ -977,7 +980,7 @@ function refreshPreview() {
 function doAdd() {
   const r = pendingItems(); if (!r) return;
   const b = cur(), sec = uid(), idx = insertIndex(b, $('#aPos').value);
-  b.sections[sec] = { label: r.label };
+  b.sections[sec] = { label: r.label, ...(r.kind ? { kind: r.kind } : {}) };
   b.items.splice(idx, 0, ...r.items.map(x => ({ ...x, sec })));
   closeModal();
   if (tab !== 'contents' && tab !== 'binder') { save(); toast(`Added ${r.label}`); return go('binder'); }
@@ -1026,7 +1029,7 @@ function showAddTab() {
         const build = () => {
           const inc = $('#oSecret') ? $('#oSecret').checked : true, own = $('#oOwn').checked;
           const cards = inc ? set.cards : set.cards.slice(0, set.official);
-          return { label: set.name, items: cards.map(c => ({ k: 'card', ...c, own })) };
+          return { label: set.name, kind: 'set', items: cards.map(c => ({ k: 'card', ...c, own })) };
         };
         A.build = build; $$('input', o).forEach(i => i.onchange = refreshPreview); refreshPreview();
       } catch (e) { o.innerHTML = `<div class="warn">Couldn't load that set. Check your internet and try again.</div>`; }
@@ -1045,7 +1048,7 @@ function showAddTab() {
         A.build = () => {
           let a = +$('#rFrom').value, z = +$('#rTo').value; if (a > z) [a, z] = [z, a];
           const own = $('#oOwn').checked;
-          return { label: `${set.name} #${set.cards[a].num}–#${set.cards[z].num}`, items: set.cards.slice(a, z + 1).map(c => ({ k: 'card', ...c, own })) };
+          return { label: `${set.name} #${set.cards[a].num}–#${set.cards[z].num}`, kind: 'set', items: set.cards.slice(a, z + 1).map(c => ({ k: 'card', ...c, own })) };
         };
         $$('select,input', o).forEach(i => i.onchange = refreshPreview); refreshPreview();
       } catch (e) { o.innerHTML = `<div class="warn">Couldn't load that set. Check your internet and try again.</div>`; }
@@ -1163,8 +1166,9 @@ function openItem(i) {
   $('#dText', m) && ($('#dText', m).oninput = e => { it.text = e.target.value; save(); render(); });
   $$('.swatches button', m).forEach(btn => btn.onclick = () => { it.color = btn.dataset.c; commit(); openItem(i); });
   $$('#dSize button', m).forEach(btn => btn.onclick = () => { it.size = btn.dataset.s; commit(); openItem(i); });
-  $('#dPrev', m).onclick = () => { const j = moveItem(i, -1); commit(); openItem(j); };
-  $('#dNext', m).onclick = () => { const j = moveItem(i, 1); commit(); openItem(j); };
+  const step = d => { const j = i + d; if (j < 0 || j >= b.items.length) return; confirmOrder(b, [b.items[i].sec, b.items[j].sec], () => { const k = moveItem(i, d); commit(); openItem(k); }); };
+  $('#dPrev', m).onclick = () => step(-1);
+  $('#dNext', m).onclick = () => step(1);
   $('#dEmpty', m).onclick = () => { b.items.splice(i, 0, { k: 'empty', sec: it.sec }); commit('Empty pocket added'); openItem(i + 1); };
   $('#dIns', m) && ($('#dIns', m).onclick = () => titleToInsert(it));
   $('#dDel', m).onclick = () => { const [gone] = b.items.splice(i, 1); closeModal(); commit(); toast('Removed', { label: 'Undo', fn: () => { b.items.splice(i, 0, gone); commit(); } }); };
@@ -1234,6 +1238,23 @@ function dropIndex(b, from, target) {
   b.items.forEach((it, i) => { if (L.at[i] >= 0 && L.at[i] < pos && L.at[i] > bestPos) { bestPos = L.at[i]; best = i; } });
   return { at: best + 1, sec: best >= 0 ? b.items[best].sec : b.items[0].sec, before: false };
 }
+/* Is this part of the binder a set in number order? (whole sets and card ranges) */
+function isSetSec(b, sec) {
+  const m = b.sections[sec]; if (!m) return false;
+  if (m.kind) return m.kind === 'set';
+  const cards = b.items.filter(x => x.sec === sec && x.k === 'card');   // older binders: guess
+  return cards.length >= 10 && cards.every(c => c.set === cards[0].set);
+}
+function confirmOrder(b, secs, go) {
+  const sec = secs.find(x => isSetSec(b, x));
+  if (!sec || store.skipOrderWarn) return go();
+  const m = openModal(`<div class="mhead"><h2>Change the set's order?</h2></div>
+    <p style="margin-top:0">You're changing the order of <b>${esc(b.sections[sec].label)}</b>. Its cards won't be in number order anymore.</p>
+    <label class="switch"><input type="checkbox" id="owSkip"> Don't show this again</label>
+    <div class="mfoot"><button class="btn ghost" id="owNo">Cancel</button><button class="btn primary" id="owYes">Continue</button></div>`);
+  $('#owNo', m).onclick = () => closeModal();
+  $('#owYes', m).onclick = () => { if ($('#owSkip', m).checked) { store.skipOrderWarn = true; save(); } go(); if ($('#owYes')) closeModal(); };
+}
 function dragDrop() {
   if (DRAG.trash) {
     const b = cur(), i = DRAG.i, [gone] = b.items.splice(i, 1);
@@ -1244,6 +1265,10 @@ function dragDrop() {
   if (!b || !target || from < 0) return;
   const snapshot = JSON.stringify({ items: b.items, sections: b.sections });
   const d = dropIndex(b, from, target);
+  if (d.before && d.at === from) return;
+  confirmOrder(b, [b.items[from].sec, d.sec], () => applyDrop(b, from, d, snapshot));
+}
+function applyDrop(b, from, d, snapshot) {
   const [it] = b.items.splice(from, 1);
   let at = d.at;
   if (!d.before && from < at) at--;          // removing the card shifted everything after it
@@ -1981,7 +2006,7 @@ $('#main').addEventListener('click', e => {
   if (d.act === 'showall') { store.showAll = true; return commit(); }
   if (d.act === 'showless') { store.showAll = false; return commit(); }
   if (d.tap) { store.tapMode = d.tap; return commit(); }
-  if (d.zoom) return zoomBy(+d.zoom);
+  if (d.view) return setView(d.view);
   if (d.insert) return openAdd(d.insert);
   if (d.ownAll) {
     const its = b.items.filter(x => x.sec === d.ownAll && x.k === 'card'), all = its.every(x => x.own);
