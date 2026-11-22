@@ -655,7 +655,7 @@ function renderHome() {
   if (store.who && !ms.some(x => x.id === store.who)) store.who = '';
   const list = store.binders.filter(x => !store.who || x.member === store.who);
   const chips = ms.length ? `<div class="chips chiprow"><button data-who="" class="${!store.who ? 'on' : ''}">Everyone</button>${ms.map(x => `<button data-who="${x.id}" class="${store.who === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}<button data-act="family">✎ Family</button></div>` : '';
-  const nudge = !Sync.user ? `<div class="nudge"><p>Sign in to keep your binders safe and use them on any device.</p><button class="btn sm" data-act="signin">Sign in</button></div>` : '';
+  const nudge = !Sync.user && !Sync.hasStoredSession() ? `<div class="nudge"><p>Sign in to keep your binders safe and use them on any device.</p><button class="btn sm" data-act="signin">Sign in</button></div>` : '';
   $('#main').innerHTML = `<div class="home">${chips}${list.length ? '' : `<p class="intro">No binders for ${esc(memberName(store.who) || 'them')} yet.</p>`}${list.map(x => {
       const L = layout(x), cards = x.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length, who = memberName(x.member);
       return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span>${who ? `<span class="mtag">${esc(who)}</span>` : ''}<b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
@@ -1634,10 +1634,10 @@ const Sync = {
         this.sb.auth.onAuthStateChange((ev, session) => {
           const u = session?.user || null;
           if (u && (!this.user || this.user.id !== u.id)) {
-            this.user = u; setTimeout(() => this.start(), 0);
+            this.user = u; setTimeout(() => this.start(), 0); render();
             if ($('#siBox')) { closeModal(); toast('Signed in. Your binders are saving to your account.'); }   // signed in from the email link in another tab
           }
-          else if (!u && this.user) { this.user = null; this.stop(); }
+          else if (!u && this.user) { this.user = null; this.stop(); render(); }
           paintAccount();
         });
         const fromLink = /access_token=|error_description=/.test(location.hash);
@@ -1648,7 +1648,7 @@ const Sync = {
           if (linkError) setTimeout(() => toast('That sign-in link expired or was already used. Ask for a new one.'), 300);
           else if (data.session) setTimeout(() => toast('Signed in. Your binders are saving to your account.'), 300);
         }
-        if (data.session && !this.user) { this.user = data.session.user; setTimeout(() => this.start(), 0); }
+        if (data.session && !this.user) { this.user = data.session.user; setTimeout(() => this.start(), 0); render(); }
         return this.sb;
       } catch (e) { this.loading = null; this.setStatus('offline'); return null; }
     })();
