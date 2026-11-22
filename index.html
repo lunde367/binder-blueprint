@@ -298,6 +298,9 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;background:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chips button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 10px;border-radius:999px;min-height:34px}
+.decochips button{width:44px;height:40px;padding:0;justify-content:center}
+.decochips button:first-child{width:auto;padding:6px 12px}
+.decochips svg{width:20px;height:20px;fill:currentColor}
 .fontchips button{font-size:16px;padding:6px 14px}
 .fontchips button[data-f=pixel]{font-size:10px}
 .chips button i{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
@@ -622,7 +625,7 @@ function go(t) {
 }
 window.addEventListener('popstate', () => {
   if (closingModal) { closingModal = false; const f = afterPop; afterPop = null; if (f) f(); return; }
-  if ($('#modal-root').innerHTML) { $('#modal-root').innerHTML = ''; return; }
+  if ($('#modal-root').innerHTML) { $('#modal-root').innerHTML = ''; if (tab === 'inserts') render(); return; }
   const t = location.hash.slice(1) || 'home';
   tab = okTab(t) ? t : 'home';
   render(); window.scrollTo(0, 0);
@@ -906,6 +909,7 @@ function openModal(html, wide) {
 function closeModal() {
   if (!$('#modal-root').innerHTML) return;
   $('#modal-root').innerHTML = '';
+  if (tab === 'inserts') render();   // show the card's latest design on the sheet
   if (history.state && history.state.modal) { closingModal = true; history.back(); }
 }
 function confirmBox(title, msg, okLabel, fn) {
@@ -1403,9 +1407,43 @@ async function setSlotPicture(slot, file) {
 const luminance = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; };
 
 /* Draw one insert onto a canvas of any size. */
+/* Generic decorations (simple shapes, 24×24 paths) and background patterns */
+const DECOS = {
+  star: ['Star', 'M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.5l7.1-.6z'],
+  sparkle: ['Sparkle', 'M12 1c.8 5.5 3.5 8.2 11 11-7.5 2.8-10.2 5.5-11 11-.8-5.5-3.5-8.2-11-11 7.5-2.8 10.2-5.5 11-11z'],
+  heart: ['Heart', 'M12 21s-8.5-5.3-8.5-11.3A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 8.5 2.7C20.5 15.7 12 21 12 21z'],
+  bolt: ['Bolt', 'M13.5 1 4 13.5h6.5L9 23l10-13h-6.5z'],
+  flame: ['Flame', 'M12 1.5c1.2 4.4 6.5 6.3 6.5 12.5a6.5 6.5 0 0 1-13 0c0-3.4 2-5.6 3.3-6.7-.1 2.3.9 3.7 2.2 3.9-.5-4.3.1-7 1-9.7z'],
+  leaf: ['Leaf', 'M21 3C9.5 3 3 8.8 3 16.5c0 1.4.3 2.6.8 3.6C6 14 10.5 10.6 16 9.5c-4.6 2.4-8 5.8-10 10.6 1.6.8 3.5 1.2 5.5 1.2C18 21.3 21.5 14 21 3z'],
+  drop: ['Drop', 'M12 1.5s7.5 8 7.5 13.6a7.5 7.5 0 0 1-15 0C4.5 9.5 12 1.5 12 1.5z'],
+  crown: ['Crown', 'M2.5 7.5l5 4.5L12 4l4.5 8 5-4.5-2 12h-15z'],
+  moon: ['Moon', 'M20.5 15.2A9 9 0 1 1 8.8 3.5a7.3 7.3 0 0 0 11.7 11.7z'],
+};
+const PATTERNS = { '': 'None', stripes: 'Stripes', dots: 'Dots', burst: 'Sunburst', sparkles: 'Sparkles', fade: 'Fade' };
+const seeded = seed => { let x = [...String(seed)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) || 1; return () => (x = (x * 1103515245 + 12345) >>> 0) / 4294967296; };
+function drawShape(ctx, key, cx, cy, size, rot = 0) {
+  const d = DECOS[key]; if (!d) return;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(size / 24, size / 24); ctx.translate(-12, -12);
+  ctx.fill(new Path2D(d[1])); ctx.restore();
+}
+function drawPattern(ctx, slot, W, H) {
+  const p = slot.pattern; if (!p) return;
+  const light = luminance(slot.bg || '#000') > 0.6;
+  const ink = light ? 'rgba(0,0,0,.09)' : 'rgba(255,255,255,.11)';
+  ctx.save(); ctx.fillStyle = ink; ctx.strokeStyle = ink;
+  if (p === 'stripes') { ctx.lineWidth = W * 0.035; for (let x = -H; x < W + H; x += W * 0.1) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H, H); ctx.stroke(); } }
+  if (p === 'dots') { const g = W * 0.08; for (let y = g / 2, r = 0; y < H; y += g, r++) for (let x = (r % 2 ? g : g / 2); x < W; x += g) { ctx.beginPath(); ctx.arc(x, y, W * 0.014, 0, 7); ctx.fill(); } }
+  if (p === 'burst') { const n = 24, R = Math.hypot(W, H); for (let k = 0; k < n; k += 2) { const a1 = k / n * 2 * Math.PI, a2 = (k + 1) / n * 2 * Math.PI; ctx.beginPath(); ctx.moveTo(W / 2, H / 2); ctx.lineTo(W / 2 + R * Math.cos(a1), H / 2 + R * Math.sin(a1)); ctx.lineTo(W / 2 + R * Math.cos(a2), H / 2 + R * Math.sin(a2)); ctx.fill(); } }
+  if (p === 'sparkles') { const rnd = seeded(slot.id + 'p'); for (let k = 0; k < 22; k++) drawShape(ctx, 'sparkle', rnd() * W, rnd() * H, W * (0.03 + rnd() * 0.06)); }
+  if (p === 'fade') { const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, light ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,.18)'); gr.addColorStop(1, light ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.45)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H); }
+  ctx.restore();
+}
+
+/* Draw one insert onto a canvas of any size. */
 function drawInsert(ctx, slot, W, H, img) {
   ctx.save();
   ctx.fillStyle = slot.bg || '#1B2B33'; ctx.fillRect(0, 0, W, H);
+  drawPattern(ctx, slot, W, H);
   if (img) {
     const rot = ((slot.rot % 360) + 360) % 360, side = rot % 180 !== 0;
     const iw = side ? img.height : img.width, ih = side ? img.width : img.height;
@@ -1417,12 +1455,13 @@ function drawInsert(ctx, slot, W, H, img) {
     ctx.restore();
   }
   const bw = slot.border ? W * 0.055 : 0;
-  if (slot.border) { ctx.lineWidth = bw; ctx.strokeStyle = slot.border; ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw); }
+  // lay out the title first, so decorations can sit around it
   const text = (slot.text || '').trim();
+  let lines = [], size = 0, lh = 0, top = H / 2, blockH = 0;
+  const [, fam, weight] = insFont(slot);
   if (text) {
     const maxW = W - bw * 2 - W * 0.12;
-    let size = W * 0.13 * (slot.tsize || 1), lines;
-    const [, fam, weight] = insFont(slot);
+    size = W * 0.13 * (slot.tsize || 1);
     for (;;) {   // wrap into at most 3 lines, shrinking until it fits
       ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
       lines = []; let line = '';
@@ -1431,17 +1470,47 @@ function drawInsert(ctx, slot, W, H, img) {
       if ((lines.length <= 3 && lines.every(l => ctx.measureText(l).width <= maxW)) || size < W * 0.05) break;
       size *= 0.92;
     }
-    const lh = size * 1.12, blockH = lines.length * lh;
+    lh = size * 1.12; blockH = lines.length * lh;
     const pad = bw + H * 0.05;
-    const top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
+    top = slot.textPos === 'top' ? pad : slot.textPos === 'middle' ? (H - blockH) / 2 : H - pad - blockH;
+  }
+  const decoColor = slot.border || (img ? '#FFFFFF' : luminance(slot.bg || '#000') > 0.6 ? '#15232B' : '#FFFFFF');
+  if (slot.deco && slot.decoPlace === 'scatter') {
+    ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = decoColor;
+    const rnd = seeded(slot.id + slot.deco);
+    const t0 = top - size * 0.5 - W * 0.06, t1 = top + blockH + W * 0.06;   // keep clear of the title
+    for (let k = 0, tries = 0; k < 9 && tries < 200; tries++) {
+      const sz = W * (0.07 + rnd() * 0.08), x = bw + W * 0.08 + rnd() * (W - bw * 2 - W * 0.16), y = bw + H * 0.06 + rnd() * (H - bw * 2 - H * 0.12), r = (rnd() - 0.5) * 0.8;
+      if (text && y + sz / 2 > t0 && y - sz / 2 < t1) continue;
+      drawShape(ctx, slot.deco, x, y, sz, r); k++;
+    }
+    ctx.restore();
+  }
+  if (slot.border) { ctx.lineWidth = bw; ctx.strokeStyle = slot.border; ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw); }
+  if (text) {
     let color = luminance(slot.bg || '#000') > 0.6 ? '#15232B' : '#FFFFFF';
     if (img) {
       ctx.fillStyle = 'rgba(10,16,20,.55)';
       ctx.fillRect(bw, top - size * 0.35, W - bw * 2, blockH + size * 0.5);
       color = '#FFFFFF';
     }
+    ctx.font = `${weight} ${size}px ${fam}, sans-serif`;
     ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     lines.forEach((l, k) => ctx.fillText(l, W / 2, top + k * lh));
+  }
+  if (slot.deco && slot.decoPlace !== 'scatter') {
+    ctx.save(); ctx.fillStyle = decoColor;
+    if (img) { ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = W * 0.02; }
+    if (slot.decoPlace === 'above') {
+      const S = W * 0.3, gap = H * 0.03;
+      let cy = !text ? H / 2 : slot.textPos === 'top' ? top + blockH + gap + S / 2 : top - gap - S / 2;
+      cy = Math.max(bw + S / 2 + H * 0.03, Math.min(H - bw - S / 2 - H * 0.03, cy));
+      drawShape(ctx, slot.deco, W / 2, cy, S);
+    } else {   // corners
+      const S = W * 0.12, o = bw + W * 0.05 + S / 2;
+      [[o, o], [W - o, o], [o, H - o], [W - o, H - o]].forEach(([x, y]) => drawShape(ctx, slot.deco, x, y, S));
+    }
+    ctx.restore();
   }
   ctx.restore();
 }
@@ -1505,6 +1574,10 @@ function openInsertEditor(k) {
         <div class="field"><span>Border</span>
           <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
         <div class="field"><span>Background</span><div class="swatches" id="ieBg">${BG_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${slot.bg === c ? 'on' : ''}" aria-label="background ${c}"></button>`).join('')}</div></div>
+        <div class="field"><span>Pattern</span><div class="chips" id="iePat">${Object.entries(PATTERNS).map(([k, n]) => `<button data-pt="${k}" class="${(slot.pattern || '') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
+          ${slot.hasImg ? '<span class="small muted" style="text-transform:none;letter-spacing:0;font-weight:500">Patterns show behind the picture, so they’re best on cards without one.</span>' : ''}</div>
+        <div class="field"><span>Decoration</span><div class="chips decochips" id="ieDeco"><button data-dc="" class="${slot.deco ? '' : 'on'}">None</button>${Object.entries(DECOS).map(([k, [n, d]]) => `<button data-dc="${k}" class="${slot.deco === k ? 'on' : ''}" aria-label="${n}" title="${n}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg></button>`).join('')}</div></div>
+        <div class="field" id="iePlaceF" ${slot.deco ? '' : 'hidden'}><span>Put it</span><div class="seg" id="iePlace">${[['corners', 'In the corners'], ['above', 'One big one'], ['scatter', 'Scattered']].map(([k, n]) => `<button data-pl="${k}" class="${(slot.decoPlace || 'corners') === k ? 'on' : ''}">${n}</button>`).join('')}</div></div>
       </div>
     </div>
     <div class="mfoot"><button class="btn ghost danger" id="ieClear">Clear card</button><button class="btn primary" data-close>Done</button></div>`, true);
@@ -1537,6 +1610,9 @@ function openInsertEditor(k) {
     offerSet(); changed();
   });
   $$('#ieBg button', m).forEach(b => b.onclick = () => { slot.bg = b.dataset.c; $$('#ieBg button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $$('#iePat button', m).forEach(b => b.onclick = () => { slot.pattern = b.dataset.pt; $$('#iePat button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
+  $$('#ieDeco button', m).forEach(b => b.onclick = () => { slot.deco = b.dataset.dc; if (slot.deco && !slot.decoPlace) slot.decoPlace = 'corners'; $$('#ieDeco button', m).forEach(x => x.classList.toggle('on', x === b)); $('#iePlaceF', m).hidden = !slot.deco; changed(); });
+  $$('#iePlace button', m).forEach(b => b.onclick = () => { slot.decoPlace = b.dataset.pl; $$('#iePlace button', m).forEach(x => x.classList.toggle('on', x === b)); changed(); });
   $('#ieClear', m).onclick = async () => { if (slot.hasImg) Sync.pictureChanged(slot.id, true); await imgDB.del(slot.id); delete imgEls[slot.id]; Object.assign(slot, blankSlot(), { id: slot.id }); saveIns(); closeModal(); render(); };
   if (!slot.hasImg) return;
   const zoom = $('#ieZoom', m);
