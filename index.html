@@ -291,6 +291,18 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .ins-whole .cuts{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);pointer-events:none}
 .ins-whole .cuts i{border:0.5px dashed rgba(255,255,255,.75);outline:0.5px dashed rgba(0,0,0,.35);outline-offset:-1px;font:600 11px var(--mono);color:#fff;text-shadow:0 1px 2px #000;padding:3px 5px;font-style:normal}
 .ins-edit{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start}
+.ins-slot{position:relative}
+.qsave{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:16px;display:grid;place-items:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.qsave.done{background:#F2C230;color:#15232B}
+.dpick{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px}
+.dpick button{flex:none;width:62px;border:2px solid transparent;border-radius:7px;padding:2px;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg);font:600 10px var(--body)}
+.dpick button.on{border-color:var(--accent)}
+.dpick canvas,.dpick .none{width:54px;height:76px;border-radius:4px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.dpick .none{display:grid;place-items:center;background:var(--sunk);font-size:20px;color:var(--muted);box-shadow:none;border:1px dashed var(--line)}
+.dpick span{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk.title.has-design{padding:0;background-size:cover!important;background-position:center!important;color:transparent;text-shadow:none}
+.titlepage.has-design{background-size:cover!important;background-position:center!important}
+.titlepage.has-design > span{display:none}
 .saved{display:flex;flex-direction:column;gap:6px;width:100%;max-width:520px;align-self:center}
 .saved h3{margin:0;font:700 13px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:8px}
 .saved h3 .pro{font-size:10px;letter-spacing:.08em;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF);color:#15232B}
@@ -606,7 +618,8 @@ function pocketHTML(b, i, over) {
     return `<button class="pk ${it.own ? 'own' : 'need'}${o}" data-i="${i}" title="#${esc(it.num)} ${esc(it.name)}">${cardFace(it)}<span class="tag">${it.own ? '✓' : '#' + esc(it.num)}</span></button>`;
   if (it.k === 'empty') return `<button class="pk empty${o}" data-i="${i}" title="Empty pocket"></button>`;
   if (it.k === 'energy') return `<button class="pk energy${o}" data-i="${i}" style="background:${ENERGY_COLOR[it.type]}" title="${esc(it.type)} Energy"><span class="orb"></span>${esc(it.type)}<img src="${ENERGY_IMG[it.type]}" alt="" loading="lazy" onerror="this.remove()"></button>`;
-  if (it.k === 'title') return `<button class="pk title${o}" data-i="${i}" style="background:${esc(it.color)}">${esc(it.text || 'Title')}</button>`;
+  if (it.k === 'title') return it.thumb ? `<button class="pk title has-design${o}" data-i="${i}" aria-label="${esc(it.text || 'Title')}" style="background:${esc(it.color)} url('${it.thumb}')">${esc(it.text || 'Title')}</button>`
+    : `<button class="pk title${o}" data-i="${i}" style="background:${esc(it.color)}">${esc(it.text || 'Title')}</button>`;
   return '';
 }
 function pageHTML(b, L, map, s) {
@@ -617,7 +630,7 @@ function pageHTML(b, L, map, s) {
   if (L.fullSides[s] !== undefined) {
     const it = b.items[L.fullSides[s]];
     const [gc, gr] = GRID[b.pockets];
-    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><i class="tp-grid" style="--c:${gc};--r:${gr}">${'<i></i>'.repeat(gc * gr)}</i><span>${esc(it.text || 'Title page')}</span></button>`;
+    inner = `<button class="pk titlepage${it.thumb ? ' has-design' : ''}" data-i="${L.fullSides[s]}" aria-label="${esc(it.text || 'Title page')}" style="background:${esc(it.color)}${it.thumb ? ` url('${it.thumb}')` : ''};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><i class="tp-grid" style="--c:${gc};--r:${gr}">${'<i></i>'.repeat(gc * gr)}</i><span>${esc(it.text || 'Title page')}</span></button>`;
   } else {
     const row = map[s] || {};
     for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
@@ -847,7 +860,8 @@ function renderGuide() {
     }
     if (it.k === 'empty') return `<div class="gc skip nopic"><span class="cap">empty</span></div>`;
     if (it.k === 'energy') return g.pics ? `<div class="gc go"><img src="${ENERGY_IMG[it.type]}" alt="" onerror="this.remove()"><i class="tick"></i><span class="cap">${esc(it.type)} Energy</span></div>` : `<div class="gc go nopic" style="background:${ENERGY_COLOR[it.type]}"><i class="tick"></i><span class="cap light">${esc(it.type)} Energy</span></div>`;
-    if (it.k === 'title') return `<div class="gc go nopic" style="background:${esc(it.color)}"><i class="tick"></i><span class="cap light">${esc(it.text || 'Title')}</span></div>`;
+    if (it.k === 'title') return it.thumb ? `<div class="gc go"><img src="${it.thumb}" alt=""><i class="tick"></i><span class="cap">${esc(it.text || 'Title')}</span></div>`
+      : `<div class="gc go nopic" style="background:${esc(it.color)}"><i class="tick"></i><span class="cap light">${esc(it.text || 'Title')}</span></div>`;
     return '';
   };
   const pageBlock = s => {
@@ -857,7 +871,7 @@ function renderGuide() {
     let grid = '';
     if (L.fullSides[s] !== undefined) {
       const it = b.items[L.fullSides[s]];
-      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tp-grid" style="--c:${cols};--r:${rows}">${'<i></i>'.repeat(cols * rows)}</i><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>${cols * rows} title inserts, one per pocket</small></span></div></div>`;
+      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)}${it.thumb ? ` url('${it.thumb}') center/cover` : ''};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tp-grid" style="--c:${cols};--r:${rows}">${'<i></i>'.repeat(cols * rows)}</i><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>${cols * rows} title inserts, one per pocket</small></span></div></div>`;
     } else {
       const row = map[s] || {};
       for (let k = 0; k < b.pockets; k++) grid += row[k] !== undefined ? cell(row[k]) : `<div class="gc unused"></div>`;
@@ -1020,8 +1034,11 @@ function doAdd() {
   const r = pendingItems(); if (!r) return;
   const b = cur(), sec = uid(), idx = insertIndex(b, $('#aPos').value);
   b.sections[sec] = { label: r.label, ...(r.kind ? { kind: r.kind } : {}) };
-  b.items.splice(idx, 0, ...r.items.map(x => ({ ...x, sec })));
+  const added = r.items.map(x => ({ ...x, sec }));
+  b.items.splice(idx, 0, ...added);
+  const src = A.tab === 'title' ? A.designSrc : null; A.designSrc = null;
   closeModal();
+  if (src) { const t = added.find(x => x.k === 'title'); if (t) attachDesign(b, t, src).then(() => { save(); render(); }); }
   if (tab !== 'contents' && tab !== 'binder') { save(); toast(`Added ${r.label}`); return go('binder'); }
   commit(`Added ${r.label}`);
 }
@@ -1155,8 +1172,17 @@ function showAddTab() {
       <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button></div></div>
       <div class="field" style="margin-bottom:0"><span>After the title…</span>
         <select class="inp" id="tThen"><option value="continue">continue right after it</option><option value="page">start the next part on a fresh page</option>${cur().spreads ? '<option value="spread">start the next part on a fresh spread</option>' : ''}</select></div>
-      <p class="small muted" style="margin-bottom:0">Tip: you'll be able to design and print the actual title card in a later update.</p></div>`;
+      <div class="field" style="margin:12px 0 0"><span>Design <em class="opt">optional</em></span><div id="tDesign"></div></div></div>`;
     let size = 'pocket';
+    const choices = designChoices(); A.designSrc = null;
+    $('#tDesign').innerHTML = choices.length ? designRow(choices, 'none') : noDesignsNote;
+    paintDesignRow(body, choices);
+    $$('#tDesign [data-dk]').forEach(btn => btn.onclick = () => {
+      const c = choices.find(x => x.key === btn.dataset.dk); A.designSrc = c ? c.sl : null;
+      $$('#tDesign [data-dk]').forEach(x => x.classList.toggle('on', x === btn));
+      if (c && !$('#tText').value.trim() && c.sl.text) $('#tText').value = c.sl.text;
+      refreshPreview();
+    });
     $$('.swatches button', body).forEach(btn => btn.onclick = () => { color = btn.dataset.c; $$('.swatches button', body).forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
     $$('#tSize button').forEach(btn => btn.onclick = () => { size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
     $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview;
@@ -1195,7 +1221,8 @@ function openItem(i) {
       <label class="field"><span>Text</span><input class="inp" id="dText" maxlength="40" value="${esc(it.text)}"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
       <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>
-      <button class="btn sm" id="dIns">✂︎ Make a printable card for this</button>`;
+      <div class="field"><span>Design</span><div id="dDesign"></div></div>
+      <button class="btn sm" id="dIns">${it.design ? '✂︎ Put this design on the print sheet' : '✂︎ Make a printable card for this'}</button>`;
   else if (it.k === 'energy') top = `<div class="detail"><div class="dimg"><div class="pk energy" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}<img src="${ENERGY_IMG[it.type]}" alt="" onerror="this.remove()"></div></div><div class="grow"><h2>${esc(it.type)} Energy</h2><p class="muted small">Basic energy · ${spot}</p></div></div>`;
   else top = `<h2>Empty pocket</h2><p class="muted small">${spot}. Saved for later.</p>`;
   const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
@@ -1210,6 +1237,17 @@ function openItem(i) {
   $('#dNext', m).onclick = () => step(1);
   $('#dEmpty', m).onclick = () => { b.items.splice(i, 0, { k: 'empty', sec: it.sec }); commit('Empty pocket added'); openItem(i + 1); };
   $('#dIns', m) && ($('#dIns', m).onclick = () => titleToInsert(it));
+  if ($('#dDesign', m)) {
+    const choices = designChoices();
+    $('#dDesign', m).innerHTML = (it.thumb ? `<div class="dpick"><button type="button" class="on" disabled><img src="${it.thumb}" alt="" style="width:54px;height:76px;border-radius:4px;object-fit:cover"><span>Current</span></button></div>` : '')
+      + (choices.length ? designRow(choices, it.design ? null : 'none') + (it.design ? '<button class="btn sm ghost" id="dNoDesign">Remove design</button>' : '') : noDesignsNote);
+    paintDesignRow($('#dDesign', m), choices);
+    $$('#dDesign [data-dk]', m).forEach(btn => btn.onclick = async () => {
+      const c = choices.find(x => x.key === btn.dataset.dk); if (!c) return;
+      await attachDesign(b, it, c.sl); commit('Design added'); openItem(i);
+    });
+    $('#dNoDesign', m) && ($('#dNoDesign', m).onclick = async () => { await attachDesign(b, it, null); commit('Design removed'); openItem(i); });
+  }
   $('#dDel', m).onclick = () => { const [gone] = b.items.splice(i, 1); closeModal(); commit(); toast('Removed', { label: 'Undo', fn: () => { b.items.splice(i, 0, gone); commit(); } }); };
 }
 
@@ -1378,7 +1416,7 @@ const resetSlot = sl => { const id = sl.id, grid = sl.grid; Object.keys(sl).forE
 const pageSlot = (grid = 9) => ({ ...blankSlot(), textPos: 'middle', grid });
 const insWorking = () => [...ins.slots, ...(ins.page ? [ins.page] : [])];   // what's on the sheet / page now
 const savedSlots = () => (ins.saved || []).flatMap(x => x.kind === 'sheet' ? x.slots : [x.design]);
-const insAll = () => [...insWorking(), ...savedSlots()];   // every design, for pictures and sync
+const insAll = () => [...insWorking(), ...savedSlots(), ...binderDesigns()];   // every design, for pictures and sync
 const insSig = d => [d ? d.slots : null, d && d.page || null, d && d.mode || 'cards', (d && d.saved || []).map(x => x.id + x.name)];
 const saveInsLocal = () => { try { localStorage.setItem(INS_KEY, JSON.stringify(ins)); } catch (e) {} };
 const saveIns = () => { saveInsLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); };
@@ -1973,9 +2011,33 @@ function savedStrip() {
   const list = ins.saved || [], pro = isPro();
   return `<div class="saved"><h3>My designs ${pro ? '<span class="pro">PRO</span>' : `<span style="font-weight:600;text-transform:none;letter-spacing:0">${designCount()} of ${FREE_SAVES} free</span>`}</h3>
     ${list.length ? `<div class="saved-row">${list.map(x => `<div class="sv"><button class="use" data-sv="${x.id}" aria-label="Use ${esc(x.name)}"><img src="${x.thumb}" alt=""></button>${x.kind === 'sheet' ? '<span class="badge">Sheet</span>' : x.kind === 'page' ? '<span class="badge">Page</span>' : ''}<button class="more" data-svm="${x.id}" aria-label="More for ${esc(x.name)}">⋯</button><span class="nm">${esc(x.name)}</span></div>`).join('')}</div>`
-      : `<p class="hint">Save a card's look from its editor (☆ Save design) to reuse it any time${pro ? ', or save the whole sheet' : ''}.</p>`}
+      : `<p class="hint">Your sheet saves by itself. To keep a card's look for later, tap the ☆ on it. Saved designs show up here, and you can pick them for titles in your binders.</p>`}
   </div>`;
 }
+
+/* ---------- using designs in binders ---------- */
+const binderDesigns = () => (store.binders || []).flatMap(b => b.items.filter(i => i.k === 'title' && i.design).map(i => i.design));
+function designChoices() {
+  const out = [];
+  ins.slots.forEach((sl, k) => { if (!slotEmpty(sl)) out.push({ key: 'c' + k, label: sl.text || `Card ${k + 1}`, sl }); });
+  if (ins.page && !slotEmpty(ins.page)) out.push({ key: 'pg', label: ins.page.text || 'Page design', sl: ins.page });
+  (ins.saved || []).filter(x => x.kind !== 'sheet').forEach(x => out.push({ key: 's' + x.id, label: '☆ ' + x.name, sl: x.design }));
+  return out;
+}
+function designRow(choices, onKey) {
+  return `<div class="dpick">${onKey ? `<button type="button" data-dk="" class="${onKey === 'none' ? 'on' : ''}"><i class="none">∅</i><span>None</span></button>` : ''}${choices.map(c => `<button type="button" data-dk="${c.key}"><canvas width="108" height="152"></canvas><span>${esc(c.label)}</span></button>`).join('')}</div>`;
+}
+function paintDesignRow(el, choices) { $$('.dpick button[data-dk] canvas', el).forEach((cv, k) => paintSlotCanvas(cv, choices[k].sl)); }
+async function attachDesign(b, it, sl) {
+  const old = it.design;
+  if (old?.hasImg) { Sync.pictureChanged(old.id, true); await imgDB.del(old.id); }
+  if (!sl) { delete it.design; delete it.thumb; return; }
+  const d = await snapshot(sl); delete d.grid;
+  it.design = d; it.thumb = await designThumb(d, 180);
+  if (!it.text || it.text === 'Title') it.text = sl.text || it.text || 'Title';
+  if (sl.bg) it.color = sl.bg;
+}
+const noDesignsNote = `<p class="small muted" style="margin:0">No designs yet. Make one in <b>Title & divider cards</b> (on My binders), then pick it here.</p>`;
 
 /* ---------- random designs ---------- */
 const RANDOM_TITLES = ['My Collection', 'Rare Finds', 'Shiny Hunters', 'Holo Heaven', 'Trade Binder', 'Favorites', 'Full Arts', 'Secret Rares', 'Dream Team', 'Starter Squad',
@@ -2039,7 +2101,7 @@ function renderInserts() {
     </div>
     ${savedStrip()}
     <div class="ins-sheet">${ins.slots.map((s, k) => `<button class="ins-slot ${slotEmpty(s) ? 'empty' : ''}" data-slot="${k}" aria-label="Card ${k + 1}">
-        ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas>`}</button>`).join('')}</div>
+        ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas><span class="qsave${isSavedDesign(s) ? ' done' : ''}" data-save="${k}" role="button" aria-label="Save to My designs">${isSavedDesign(s) ? '★' : '☆'}</span>`}</button>`).join('')}</div>
     <p class="intro">Tap a card to crop its picture, add a title or a set-colored border. Up to 9 cards print on one letter sheet, each exactly 2.5 × 3.5 in, with cut lines. When printing, choose <b>Actual size / 100%</b>.</p>
     <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
   $$('.ins-slot canvas').forEach(c => paintSlotCanvas(c, ins.slots[+c.parentNode.dataset.slot]));
@@ -2269,6 +2331,14 @@ async function switchInsMode(mode) {
   if (note) toast(note);
 }
 function titleToInsert(it) {
+  if (it.design) {   // put the chosen design on the print sheet (or page)
+    if (it.size === 'page') {
+      const go_ = async () => { ins.page ??= pageSlot(); const grid = GRID[cur()?.pockets] ? cur().pockets : 9; if (ins.page.hasImg) { Sync.pictureChanged(ins.page.id, true); await imgDB.del(ins.page.id); } await copyDesign(it.design, ins.page); ins.page.grid = grid; ins.mode = 'page'; saveIns(); closeModal(); go('inserts'); toast('Your design is ready to print as a whole page.'); };
+      return ins.page && !slotEmpty(ins.page) && designSig(ins.page) !== designSig(it.design) ? confirmBox('Replace your page design?', 'Put this title\'s design on the page in place of your current one?', 'Replace', go_) : go_();
+    }
+    const sl = ins.slots.find(slotEmpty); if (!sl) return toast('The insert sheet is full. Clear a card first.');
+    return copyDesign(it.design, sl).then(() => { ins.mode = 'cards'; saveIns(); closeModal(); go('inserts'); toast(`Put it on card ${ins.slots.indexOf(sl) + 1}, ready to print.`); });
+  }
   if (it.size === 'page') {
     const go_ = () => { const id = ins.page?.id; ins.page = { ...pageSlot(GRID[cur()?.pockets] ? cur().pockets : 9), ...(id ? { id } : {}), text: it.text || 'Title', bg: it.color || '#1B2B33' }; ins.mode = 'page'; saveIns(); closeModal(); go('inserts'); toast('Made a whole-page design. Tap it to style it.'); };
     return ins.page && !slotEmpty(ins.page) && ins.page.text !== it.text ? confirmBox('Replace your page design?', 'You already have a whole-page design. Start a new one for this title?', 'Replace', go_) : go_();
@@ -2289,6 +2359,8 @@ $('#main').addEventListener('click', e => {
     if (md.dataset.g) { ins.page ??= pageSlot(); ins.page.grid = +md.dataset.g; }
     saveIns(); return render();
   }
+  const qs = e.target.closest('[data-save]');
+  if (qs) { const sl = ins.slots[+qs.dataset.save]; return isSavedDesign(sl) ? toast('That one is already in My designs.') : saveDesign(sl); }
   const sv = e.target.closest('[data-sv],[data-svm]');
   if (sv) return sv.dataset.svm ? savedMenu(sv.dataset.svm) : useSaved(sv.dataset.sv);
   const t = e.target.closest('[data-slot],[data-ins-act]'); if (!t) return;
