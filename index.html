@@ -162,7 +162,10 @@ main{display:flex;flex-direction:column;gap:14px}
 .pk.title,.titlepage{display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:var(--display);font-weight:800;padding:4px;line-height:1.1;word-break:break-word;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .pk.title{font-size:calc(11px*var(--zoom))}
 .titlepage{grid-column:1/-1;border-radius:5px;font-size:calc(26px*var(--zoom));border:none;width:100%;padding:12%;box-shadow:inset 0 0 0 calc(6px*var(--zoom)) rgba(255,255,255,.25)}
-.titlepage span{display:block;max-width:100%}
+.titlepage span{display:block;max-width:100%;position:relative}
+.titlepage{position:relative}
+.tp-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);gap:3px;padding:0;pointer-events:none}
+.tp-grid i{border:1px dashed rgba(255,255,255,.45);border-radius:3px}
 .pk.energy{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:calc(10px*var(--zoom));gap:3px}
 .pk.energy .orb{width:46%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8)}
 .pk.over-pk::after{content:"";position:absolute;inset:0;background:rgba(194,65,12,.18)}
@@ -338,7 +341,7 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
   :root{--bg:#fff;--surface:#fff;--sunk:#f2f2f2;--fg:#000;--muted:#444;--line:#bbb;--need:#9a3412}
   body{background:#fff;color:#000;font-size:11px}
   .wrap{padding:0;max-width:none;gap:0}
-  header,.tabs,.banner,.fab,.no-print,.toast,#modal-root{display:none!important}
+  header,.tabs,.banner,.fab,.zoomer,#trash,.no-print,.toast,#modal-root{display:none!important}
   body.print-ins .wrap{display:none!important}
   body.print-ins #ins-print{display:block}
   .ins-page{position:relative;width:8.5in;height:11in;overflow:hidden;page-break-after:avoid;break-after:avoid}
@@ -355,8 +358,10 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
   .gspread{border:1px solid #999;border-radius:8px;margin-bottom:0.12in;padding:6px 8px}
   .gspread h3{font-size:13px;margin-bottom:4px}
   .gpair{gap:0.2in;justify-content:center}
-  .gpg{flex:0 0 3.1in}
-  .gpg.gcover{height:auto;align-self:stretch}
+  .gpg{flex:0 0 2.8in}
+  .gpg.gcover{visibility:hidden}
+  .printhead{margin-bottom:4px}
+  .glegend{margin-bottom:4px}
   .gc .cap{font-size:7.5px}
   .gc .cap .n{font-size:7px}
   .gc{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -578,7 +583,7 @@ function pageHTML(b, L, map, s) {
   if (L.fullSides[s] !== undefined) {
     const it = b.items[L.fullSides[s]];
     const [gc, gr] = GRID[b.pockets];
-    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><span>${esc(it.text || 'Title page')}</span></button>`;
+    inner = `<button class="pk titlepage" data-i="${L.fullSides[s]}" style="background:${esc(it.color)};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><i class="tp-grid" style="--c:${gc};--r:${gr}">${'<i></i>'.repeat(gc * gr)}</i><span>${esc(it.text || 'Title page')}</span></button>`;
   } else {
     const row = map[s] || {};
     for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
@@ -819,7 +824,7 @@ function renderGuide() {
     let grid = '';
     if (L.fullSides[s] !== undefined) {
       const it = b.items[L.fullSides[s]];
-      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>whole-page title</small></span></div></div>`;
+      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tp-grid" style="--c:${cols};--r:${rows}">${'<i></i>'.repeat(cols * rows)}</i><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>${cols * rows} title inserts, one per pocket</small></span></div></div>`;
     } else {
       const row = map[s] || {};
       for (let k = 0; k < b.pockets; k++) grid += row[k] !== undefined ? cell(row[k]) : `<div class="gc unused"></div>`;
