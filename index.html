@@ -2033,6 +2033,27 @@ function printWith(kind) {
 window.addEventListener('afterprint', () => document.body.classList.remove('print-ins'));
 
 /* send a binder title card to the maker */
+/* Switching views carries the design across when the other side is still empty */
+const DESIGN_KEYS = ['text', 'textPos', 'bg', 'border', 'font', 'tsize', 'pattern', 'deco', 'decoPlace', 'tstyle', 'hasImg', 'x', 'y', 'z', 'rot'];
+async function copyDesign(from, to) {
+  DESIGN_KEYS.forEach(k => { if (k in from) to[k] = from[k]; else delete to[k]; });
+  if (from.hasImg) {
+    const data = await imgDB.get(from.id);
+    if (data) { await imgDB.set(to.id, data); delete imgEls[to.id]; Sync.pictureChanged(to.id); } else to.hasImg = false;
+  }
+}
+async function switchInsMode(mode) {
+  let note = '';
+  if (mode === 'page') {
+    ins.page ??= pageSlot();
+    const src = ins.slots.find(s => !slotEmpty(s));
+    if (src && slotEmpty(ins.page)) { await copyDesign(src, ins.page); note = 'Started the page from your card. Tap it to change anything.'; }
+  } else if (ins.page && !slotEmpty(ins.page) && ins.slots.every(slotEmpty)) {
+    await copyDesign(ins.page, ins.slots[0]); note = 'Put your page design on card 1.';
+  }
+  ins.mode = mode; saveIns(); render();
+  if (note) toast(note);
+}
 function titleToInsert(it) {
   if (it.size === 'page') {
     const go_ = () => { const id = ins.page?.id; ins.page = { ...pageSlot(GRID[cur()?.pockets] ? cur().pockets : 9), ...(id ? { id } : {}), text: it.text || 'Title', bg: it.color || '#1B2B33' }; ins.mode = 'page'; saveIns(); closeModal(); go('inserts'); toast('Made a whole-page design. Tap it to style it.'); };
@@ -2050,7 +2071,7 @@ $('#main').addEventListener('click', e => {
   if (tab !== 'inserts') return;
   const md = e.target.closest('#insMode button, #insGrid button');
   if (md) {
-    if (md.dataset.m) ins.mode = md.dataset.m;
+    if (md.dataset.m && md.dataset.m !== (ins.mode || 'cards')) return switchInsMode(md.dataset.m);
     if (md.dataset.g) { ins.page ??= pageSlot(); ins.page.grid = +md.dataset.g; }
     saveIns(); return render();
   }
