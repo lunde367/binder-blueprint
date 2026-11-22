@@ -1418,10 +1418,16 @@ const DECOS = {
   drop: ['Drop', 'M12 1.5s7.5 8 7.5 13.6a7.5 7.5 0 0 1-15 0C4.5 9.5 12 1.5 12 1.5z'],
   crown: ['Crown', 'M2.5 7.5l5 4.5L12 4l4.5 8 5-4.5-2 12h-15z'],
   moon: ['Moon', 'M20.5 15.2A9 9 0 1 1 8.8 3.5a7.3 7.3 0 0 0 11.7 11.7z'],
+  gem: ['Gem', 'M7 3h10l5 6-10 12L2 9z'],
+  shield: ['Shield', 'M12 1.5l8.5 3.2v6.1c0 5.6-3.6 9.9-8.5 11.7-4.9-1.8-8.5-6.1-8.5-11.7V4.7z'],
+  paw: ['Paw', 'M12 12.5c-3.2 0-6.5 3.7-6.5 6.4 0 1.8 1.5 2.6 3.1 2.6 1.4 0 2.2-.7 3.4-.7s2 .7 3.4.7c1.6 0 3.1-.8 3.1-2.6 0-2.7-3.3-6.4-6.5-6.4zM2.5 10.5a2.2 2.8 0 1 0 4.4 0a2.2 2.8 0 1 0-4.4 0zM6.8 5a2.2 2.8 0 1 0 4.4 0a2.2 2.8 0 1 0-4.4 0zM12.8 5a2.2 2.8 0 1 0 4.4 0a2.2 2.8 0 1 0-4.4 0zM17.1 10.5a2.2 2.8 0 1 0 4.4 0a2.2 2.8 0 1 0-4.4 0z'],
+  note: ['Music', 'M9 4.5 21 2v13.2a3.3 3.3 0 1 1-2-3V6.3l-8 1.7v9.7a3.3 3.3 0 1 1-2-3z'],
+  burst: ['Burst', 'M12 1l2.1 6.4L20 4l-3.4 5.9L23 12l-6.4 2.1L20 20l-5.9-3.4L12 23l-2.1-6.4L4 20l3.4-5.9L1 12l6.4-2.1L4 4l5.9 3.4z'],
+  ghost: ['Ghost', 'M12 2a8 8 0 0 0-8 8v12l2.7-2 2.6 2 2.7-2 2.7 2 2.6-2 2.7 2V10a8 8 0 0 0-8-8zM8.6 8.5a1.6 2 0 1 0 3.2 0a1.6 2 0 1 0-3.2 0zM12.2 8.5a1.6 2 0 1 0 3.2 0a1.6 2 0 1 0-3.2 0z'],
 };
-const PATTERNS = { '': 'None', holo: 'Holo foil', stars: 'Starfield', halftone: 'Halftone', burst: 'Sunburst', speed: 'Speed lines', waves: 'Waves', diamonds: 'Diamonds', stripes: 'Stripes', glow: 'Glow' };
+const PATTERNS = { '': 'None', holo: 'Holo foil', stars: 'Starfield', halftone: 'Halftone', burst: 'Sunburst', speed: 'Speed lines', waves: 'Waves', diamonds: 'Diamonds', stripes: 'Stripes', glow: 'Glow', confetti: 'Confetti', bubbles: 'Bubbles', honeycomb: 'Honeycomb', crackle: 'Energy crackle', checker: 'Checker', sunset: 'Sunset' };
 const PATTERN_ALIAS = { dots: 'halftone', sparkles: 'stars', fade: 'glow' };   // older cards
-const TEXT_STYLES = { pop: 'Pop', '3d': '3D', neon: 'Neon', banner: 'Banner', clean: 'Clean' };
+const TEXT_STYLES = { pop: 'Pop', '3d': '3D', neon: 'Neon', banner: 'Banner', gold: 'Gold', sticker: 'Sticker', retro: 'Retro', clean: 'Clean' };
 const HOLO = 'holo';
 const seeded = seed => { let x = [...String(seed)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) || 1; return () => (x = (x * 1103515245 + 12345) >>> 0) / 4294967296; };
 const hexRGB = h => { const n = parseInt((h || '#000000').slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
@@ -1442,7 +1448,7 @@ function drawShape(ctx, key, cx, cy, size, rot = 0, opt = {}) {
   else { ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 2.5; ctx.shadowOffsetY = 1.2; }
   if (col === HOLO) ctx.fillStyle = holoGradient(ctx, 0, 0, 24, 24);
   else { const g = ctx.createLinearGradient(0, 2, 0, 22); g.addColorStop(0, shade(col, 0.45)); g.addColorStop(0.55, col); g.addColorStop(1, shade(col, -0.25)); ctx.fillStyle = g; }
-  ctx.fill(path);
+  ctx.fill(path, 'evenodd');
   ctx.shadowColor = 'transparent';
   ctx.lineWidth = 1.9; ctx.lineJoin = 'round'; ctx.strokeStyle = opt.outline || 'rgba(0,0,0,.6)'; ctx.stroke(path);
   ctx.globalAlpha = 0.5; ctx.lineWidth = 0.7; ctx.strokeStyle = '#fff'; ctx.translate(0, -0.6); ctx.stroke(path);   // little shine on top edge
@@ -1520,6 +1526,57 @@ function drawPattern(ctx, slot, W, H) {
   if (p === 'stripes') {
     ctx.lineWidth = W * 0.05;
     for (let x = -H, k = 0; x < W + H; x += W * 0.13, k++) { ctx.strokeStyle = ink(k % 3 === 0 ? 0.16 : 0.07); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + H, H); ctx.stroke(); }
+  }
+  if (p === 'confetti') {
+    const cols = ['#FF5D73', '#FFC93C', '#3DDC97', '#4CC9F0', '#B388FF', '#FFFFFF'];
+    for (let k = 0; k < 70; k++) {
+      ctx.save(); ctx.translate(rnd() * W, rnd() * H); ctx.rotate(rnd() * Math.PI); ctx.globalAlpha = 0.55 + rnd() * 0.35;
+      ctx.fillStyle = cols[Math.floor(rnd() * cols.length)]; const z = W * (0.015 + rnd() * 0.02);
+      if (rnd() < 0.6) ctx.fillRect(-z, -z * 0.4, z * 2, z * 0.8); else { ctx.beginPath(); ctx.arc(0, 0, z * 0.6, 0, 7); ctx.fill(); }
+      ctx.restore();
+    }
+  }
+  if (p === 'bubbles') {
+    for (let k = 0; k < 26; k++) {
+      const x = rnd() * W, y = rnd() * H, r = W * (0.025 + rnd() * 0.09);
+      ctx.lineWidth = W * 0.006; ctx.strokeStyle = ink(0.28); ctx.fillStyle = ink(0.06);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = ink(0.5); ctx.beginPath(); ctx.arc(x, y, r * 0.7, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
+    }
+  }
+  if (p === 'honeycomb') {
+    const r = W * 0.075, hw = r * Math.sqrt(3);
+    ctx.lineWidth = W * 0.007;
+    for (let y = 0, row = 0; y < H + r * 2; y += r * 1.5, row++) for (let x = (row % 2) * hw / 2; x < W + hw; x += hw) {
+      const d = Math.hypot(x - W / 2, y - H / 2) / Math.hypot(W / 2, H / 2);
+      ctx.strokeStyle = ink(0.08 + d * 0.22); ctx.beginPath();
+      for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); }
+      ctx.closePath(); ctx.stroke();
+    }
+  }
+  if (p === 'crackle') {
+    ctx.shadowColor = light ? 'rgba(0,0,0,.3)' : 'rgba(180,230,255,.95)'; ctx.shadowBlur = W * 0.025; ctx.lineJoin = 'round';
+    for (let k = 0; k < 7; k++) {
+      let x = W / 2 + (rnd() - 0.5) * W * 0.2, y = H * 0.45 + (rnd() - 0.5) * H * 0.2, a = rnd() * Math.PI * 2;
+      ctx.strokeStyle = light ? 'rgba(0,0,0,.3)' : 'rgba(255,255,255,.75)'; ctx.lineWidth = W * (0.004 + rnd() * 0.006);
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let j = 0; j < 9; j++) { a += (rnd() - 0.5) * 1.1; const L = W * (0.05 + rnd() * 0.07); x += Math.cos(a) * L; y += Math.sin(a) * L; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+  }
+  if (p === 'checker') {
+    const c = W / 8;
+    for (let y = 0, r = 0; y < H; y += c, r++) for (let x = 0, q = 0; x < W; x += c, q++) if ((r + q) % 2) { ctx.fillStyle = ink(0.09); ctx.fillRect(x, y, c, c); }
+    const v = ctx.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(255,255,255,.12)'); v.addColorStop(1, 'rgba(0,0,0,.18)'); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  }
+  if (p === 'sunset') {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, 'rgba(255,94,120,.45)'); g.addColorStop(0.5, 'rgba(255,180,70,.35)'); g.addColorStop(1, 'rgba(90,40,160,.5)');
+    ctx.globalCompositeOperation = light ? 'multiply' : 'overlay'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    const cy = H * 0.62, R = W * 0.3; ctx.save(); ctx.beginPath(); ctx.arc(W / 2, cy, R, 0, 7); ctx.clip();
+    const sg = ctx.createLinearGradient(0, cy - R, 0, cy + R); sg.addColorStop(0, 'rgba(255,230,120,.6)'); sg.addColorStop(1, 'rgba(255,90,120,.45)'); ctx.fillStyle = sg; ctx.fillRect(0, cy - R, W, R * 2);
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let k = 0; k < 6; k++) { const yy = cy + R * (0.05 + k * 0.17); ctx.fillRect(0, yy, W, R * 0.03 + k * R * 0.012); }
+    ctx.restore();
   }
   if (p === 'glow') {
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.75); g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1640,6 +1697,24 @@ function drawInsert(ctx, slot, W, H, img) {
       ctx.shadowBlur = 0;
     } else if (style === 'clean') {
       ctx.fillStyle = img ? '#FFFFFF' : fill; each((l, x, y) => ctx.fillText(l, x, y));
+    } else if (style === 'gold') {
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = size * 0.18; ctx.shadowOffsetY = size * 0.08;
+      ctx.lineWidth = size * 0.17; ctx.strokeStyle = '#3A2604'; each((l, x, y) => ctx.strokeText(l, x, y)); ctx.restore();
+      ctx.lineWidth = size * 0.07; ctx.strokeStyle = '#FFE9A3'; each((l, x, y) => ctx.strokeText(l, x, y));
+      const g = ctx.createLinearGradient(0, top, 0, top + blockH);
+      for (let k = 0; k < lines.length; k++) { const o = k / lines.length, d = 1 / lines.length; g.addColorStop(o, '#FFF6C8'); g.addColorStop(o + d * 0.45, '#F2C14E'); g.addColorStop(o + d * 0.55, '#B9801A'); g.addColorStop(o + d * 0.99, '#F7D774'); }
+      ctx.fillStyle = g; each((l, x, y) => ctx.fillText(l, x, y));
+    } else if (style === 'sticker') {
+      const col = accent || (bgLight ? '#15232B' : shade(slot.bg || '#1B2B33', -0.35));
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = size * 0.12; ctx.shadowOffsetY = size * 0.06;
+      ctx.lineWidth = size * 0.32; ctx.strokeStyle = '#FFFFFF'; each((l, x, y) => ctx.strokeText(l, x, y)); ctx.restore();
+      ctx.lineWidth = size * 0.32; ctx.strokeStyle = '#FFFFFF'; each((l, x, y) => ctx.strokeText(l, x, y));
+      ctx.fillStyle = col; each((l, x, y) => ctx.fillText(l, x, y));
+    } else if (style === 'retro') {
+      const o = size * 0.06, c1 = '#FF4D8D', c2 = accent || '#22D3EE';
+      ctx.lineWidth = size * 0.1; ctx.strokeStyle = '#0E171C';
+      [[o * 3, c2], [o * 1.5, c1]].forEach(([d, c]) => { each((l, x, y) => ctx.strokeText(l, x + d, y + d)); ctx.fillStyle = c; each((l, x, y) => ctx.fillText(l, x + d, y + d)); });
+      each((l, x, y) => ctx.strokeText(l, x, y)); ctx.fillStyle = '#FFF8E7'; each((l, x, y) => ctx.fillText(l, x, y));
     } else {   // pop: thick outline + drop shadow
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = size * 0.15; ctx.shadowOffsetY = size * 0.08;
       ctx.lineWidth = size * 0.16; ctx.strokeStyle = edge; each((l, x, y) => ctx.strokeText(l, x, y));
@@ -1713,7 +1788,7 @@ function openInsertEditor(k) {
         <label class="field"><span>Text size</span><input type="range" id="ieSize" min="0.5" max="1.6" step="0.05" value="${slot.tsize || 1}"></label>
         <div class="field"><span>Title position</span><div class="seg" id="iePos">${['top', 'middle', 'bottom'].map(p => `<button data-p="${p}" class="${slot.textPos === p ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div></div>
         <div class="field"><span>Border</span>
-          <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button><button data-b="holo" class="${slot.border === 'holo' ? 'on' : ''}"><i style="background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF)"></i>Holo foil</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
+          <div class="chips" id="ieBorder"><button data-b="" class="${slot.border ? '' : 'on'}">No border</button><button data-b="holo" class="${slot.border === 'holo' ? 'on' : ''}"><i style="background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF)"></i>Holo foil</button><button data-b="#D4A72C" class="${slot.border === '#D4A72C' ? 'on' : ''}"><i style="background:linear-gradient(135deg,#FFF1B5,#D4A72C,#8A6210)"></i>Gold foil</button><button data-b="#B8C2CC" class="${slot.border === '#B8C2CC' ? 'on' : ''}"><i style="background:linear-gradient(135deg,#FFFFFF,#B8C2CC,#6B7680)"></i>Silver foil</button>${SET_BORDERS.map(([n, c]) => `<button data-b="${c}" data-n="${esc(n)}" class="${slot.border === c ? 'on' : ''}"><i style="background:${c}"></i>${esc(n)}</button>`).join('')}</div></div>
         <div class="field"><span>Background</span><div class="swatches" id="ieBg">${BG_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${slot.bg === c ? 'on' : ''}" aria-label="background ${c}"></button>`).join('')}</div></div>
         <div class="field"><span>Pattern</span><div class="chips" id="iePat">${Object.entries(PATTERNS).map(([k, n]) => `<button data-pt="${k}" class="${(PATTERN_ALIAS[slot.pattern] || slot.pattern || '') === k ? 'on' : ''}">${n}</button>`).join('')}</div>
           ${slot.hasImg ? '<span class="small muted" style="text-transform:none;letter-spacing:0;font-weight:500">Patterns show behind the picture, so they’re best on cards without one.</span>' : ''}</div>
