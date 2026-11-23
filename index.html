@@ -74,6 +74,15 @@ header{display:flex;flex-direction:column;gap:6px}
 .vrow span{flex:1}
 .theme{margin-left:auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 13px var(--body);padding:6px 12px;border-radius:999px}
 .theme svg{width:16px;height:16px}
+.theme{padding:3px;gap:2px}
+.theme span{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;color:var(--muted)}
+.theme span.on{background:var(--accent);color:var(--accent-ink)}
+svg.i{width:1.15em;height:1.15em;vertical-align:-.2em;flex:none}
+.btn svg.i,.fab svg.i{margin-right:2px}
+.seg.addtabs .ic svg.i{width:24px;height:24px}
+.ticon svg.i{width:20px;height:20px}
+.qsave svg.i{width:16px;height:16px;vertical-align:0}
+.warn svg.i{margin-right:4px}
 .back{border:0;background:transparent;color:var(--accent);font:700 15px var(--body);padding:8px 8px 8px 0;min-height:40px;align-self:flex-start}
 .home{display:flex;flex-direction:column;gap:14px}
 .hero{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
@@ -140,6 +149,7 @@ main{display:flex;flex-direction:column;gap:14px}
 .spread.single{background:var(--binder)}
 .page{width:var(--pw,170px);background:var(--page);border-radius:7px;padding:6px;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px;align-content:start;position:relative}
 .page.cover{background:transparent;display:grid;place-items:center;color:#7d929c;font-size:12px;text-transform:uppercase;letter-spacing:.08em;text-align:center;border:1.5px dashed rgba(255,255,255,.14)}
+@media(max-width:700px){.page.cover{width:calc(var(--pw,170px) * .22);writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;padding:4px 0}}
 .page.over{background:var(--need-bg)}
 .page .pno{position:absolute;bottom:-1px;left:0;right:0;text-align:center;font:500 10px var(--mono);color:#7d929c;transform:translateY(100%);padding-top:2px}
 .page.over .pno{color:var(--need)}
@@ -444,7 +454,7 @@ input[type=range]{width:100%;accent-color:var(--accent);padding:0;border:0;backg
   <div class="banner" id="banner"></div>
   <main id="main"></main>
 </div>
-<button class="fab" id="fab">＋ Add</button>
+<button class="fab" id="fab"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add</button>
 <div id="trash" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg><span>Drop here to remove</span></div>
 <div id="modal-root"></div>
 <div id="ins-print"></div>
@@ -491,6 +501,27 @@ function saveLocal() {
   catch (e) { if (storageOK) { storageOK = false; renderBanner(); } }
 }
 function save() { saveLocal(); if (typeof Sync !== 'undefined') Sync.schedule(); }
+/* one icon style everywhere: simple line icons that follow the text color */
+const ICONS = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  print: '<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
+  binder: '<path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M3 7h5M3 12h5M3 17h5M12 8h4"/>',
+  star: '<path d="M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3L12 17.3l-5.7 3 1.1-6.3L2.8 9.5l6.4-.9z"/>',
+  starFill: '<path fill="currentColor" d="M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3L12 17.3l-5.7 3 1.1-6.3L2.8 9.5l6.4-.9z"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/>',
+  scissors: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  sparkle: '<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/>',
+  warn: '<path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/>',
+  layers: '<path d="M12 3 2 8l10 5 10-5z"/><path d="m2 12.5 10 5 10-5M2 17l10 5 10-5"/>',
+  hash: '<path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/>',
+  pick: '<path d="M5 3l14 7-6 2-2 6z"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  empty: '<rect x="5" y="3" width="14" height="18" rx="2" stroke-dasharray="3 3"/>',
+};
+const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const cur = () => store.binders.find(b => b.id === store.cur) || null;
 
 /* ---------------- layout engine ----------------
@@ -706,24 +737,24 @@ function render() {
 function renderHome() {
   const steps = `<div class="steps"><div><i>1</i>Pick your binder</div><div><i>2</i>Add your cards</div><div><i>3</i>Print &amp; sleeve</div></div>`;
   if (!store.binders.length) {
-    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="create">＋ Create a binder</button>${steps}</div>
-      <button class="btile tool" data-act="inserts"><span class="ticon">✂︎</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button>
+    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="create">${ic('plus')} Create a binder</button>${steps}</div>
+      <button class="btile tool" data-act="inserts"><span class="ticon">${ic('scissors')}</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button>
       <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
     return;
   }
   const ms = store.members || [];
   if (store.who && !ms.some(x => x.id === store.who)) store.who = '';
   const list = store.binders.filter(x => !store.who || x.member === store.who);
-  const chips = ms.length ? `<div class="chips chiprow"><button data-who="" class="${!store.who ? 'on' : ''}">Everyone</button>${ms.map(x => `<button data-who="${x.id}" class="${store.who === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}<button data-act="family">✎ Family</button></div>` : '';
+  const chips = ms.length ? `<div class="chips chiprow"><button data-who="" class="${!store.who ? 'on' : ''}">Everyone</button>${ms.map(x => `<button data-who="${x.id}" class="${store.who === x.id ? 'on' : ''}">${esc(x.name)}</button>`).join('')}<button data-act="family">${ic('pencil')} Family</button></div>` : '';
   const nudge = !Sync.user && !Sync.hasStoredSession() ? `<div class="nudge"><p>Sign in to keep your binders safe and use them on any device.</p><button class="btn sm" data-act="signin">Sign in</button></div>` : '';
   $('#main').innerHTML = `<div class="home">${chips}${list.length ? '' : `<p class="intro">No binders for ${esc(memberName(store.who) || 'them')} yet.</p>`}${list.map(x => {
       const L = layout(x), cards = x.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length, who = memberName(x.member);
       return `<button class="btile" data-open="${x.id}">${miniGrid(x.pockets)}<span>${who ? `<span class="mtag">${esc(who)}</span>` : ''}<b>${esc(x.name)}</b><span class="small muted">${x.pockets}-pocket · ${x.pages} pages${cards.length ? ` · ${own}/${cards.length} cards` : ' · empty'}</span></span><span class="go">›</span>
         <span class="meter${L.used > L.cap ? ' over' : ''}"><i style="width:${Math.min(100, Math.round(L.used / L.cap * 100))}%"></i></span></button>`;
     }).join('')}
-    <div class="drow" style="margin:0"><button class="btn primary" data-act="create">＋ Create a binder</button>${ms.length ? '' : '<button class="btn ghost" data-act="family">Add family members</button>'}</div>
+    <div class="drow" style="margin:0"><button class="btn primary" data-act="create">${ic('plus')} Create a binder</button>${ms.length ? '' : '<button class="btn ghost" data-act="family">Add family members</button>'}</div>
     ${nudge}
-    <button class="btile tool" data-act="inserts"><span class="ticon">✂︎</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button></div>
+    <button class="btile tool" data-act="inserts"><span class="ticon">${ic('scissors')}</span><span><b>Title &amp; divider cards</b><span class="small muted">Make your own inserts and print them at card size</span></span><span class="go">›</span></button></div>
     <p class="foot">Card data and pictures from <a href="https://tcgdex.dev" target="_blank" rel="noopener">TCGdex</a>. Not connected to any card game company.</p>`;
 }
 function openCreate() {
@@ -760,7 +791,7 @@ function statsHTML(b, L) {
   const cards = b.items.filter(i => i.k === 'card'), own = cards.filter(c => c.own).length;
   const pct = Math.min(100, Math.round(L.used / L.cap * 100));
   const a = fitAdvice(b, L);
-  return (a ? `<div class="warn">⚠️ Not everything fits! Your plan needs ${plural(a.needSides, 'page side')} but this binder has ${L.capSides}. <span>${adviceText(b, a)}</span></div>` : '') +
+  return (a ? `<div class="warn">${ic('warn')}Not everything fits! Your plan needs ${plural(a.needSides, 'page side')} but this binder has ${L.capSides}. <span>${adviceText(b, a)}</span></div>` : '') +
   `<div class="stats">
     <div class="stat"><b>${L.used}<small class="muted" style="font-size:15px"> / ${L.cap}</small></b><span>Pockets used</span><div class="meter${a ? ' over' : ''}"><i style="width:${pct}%"></i></div></div>
     <div class="stat"><b>${Math.max(0, L.capSides - L.usedSides)}</b><span>Sides left of ${L.capSides}</span></div>
@@ -771,7 +802,7 @@ function statsHTML(b, L) {
 function renderBinder() {
   const b = cur(), L = layout(b), map = bySide(L);
   if (!b.items.length) {
-    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="add">＋ Add cards</button>
+    $('#main').innerHTML = `<div class="hero"><button class="btn primary" data-act="add">${ic('plus')} Add cards</button>
       <p class="muted" style="margin:0">A whole set, a few cards, or a title page.</p></div>`;
     return;
   }
@@ -831,7 +862,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTi
 
 function renderContents() {
   const b = cur(), L = layout(b), order = sectionOrder(b);
-  if (!order.length) { $('#main').innerHTML = `<div class="empty-state"><h2>Nothing inside yet</h2><p class="muted">Everything you add shows up here in binder order. You can move whole sets up and down.</p><button class="btn primary" data-act="add">＋ Add something</button></div>`; return; }
+  if (!order.length) { $('#main').innerHTML = `<div class="empty-state"><h2>Nothing inside yet</h2><p class="muted">Everything you add shows up here in binder order. You can move whole sets up and down.</p><button class="btn primary" data-act="add">${ic('plus')} Add something</button></div>`; return; }
   let h = `<p class="intro">Everything in this binder, in order. Move a set up or down and the pages re-arrange by themselves.</p><div class="secs">`;
   order.forEach((sec, n) => {
     const st = secStats(b, L, sec), meta = b.sections[sec] || { label: 'Cards' };
@@ -860,7 +891,7 @@ function renderGuide() {
         <label class="switch"><input type="checkbox" data-g="pics" ${g.pics ? 'checked' : ''}> Card pictures</label>
         <label class="switch"><input type="checkbox" data-g="skipBlank" ${g.skipBlank ? 'checked' : ''}> Skip blank pages</label>
         <span class="grow"></span>
-        <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>🖨 Print</button>
+        <button class="btn primary" data-act="print" ${total ? '' : 'disabled'}>${ic('print')} Print</button>
       </div>
       <p class="intro">Laid out like your open binder. Work one spread at a time, left page then right page, top row first.</p>
     </div>
@@ -931,7 +962,7 @@ function renderSetup() {
       <span class="small muted">Count the plastic pages. Each one holds cards on the front and back. (A "20 page" binder has 40 sides.)</span></div>
     <label class="switch"><input type="checkbox" id="sSpreads" ${b.spreads ? 'checked' : ''}> Opens as two-page spreads</label>
     <p class="small muted" style="margin:6px 0 0 32px">Like a real binder: page 1 sits on the right, then pages 2 & 3 face each other, and so on. Turn off for one page at a time.</p>
-    ${L.used > L.cap ? `<div class="warn" style="margin-top:12px">⚠️ Your plan needs ${L.usedSides} sides; this binder has ${L.capSides}. ${adviceText(b, fitAdvice(b, L))}</div>` : ''}
+    ${L.used > L.cap ? `<div class="warn" style="margin-top:12px">${ic('warn')}Your plan needs ${L.usedSides} sides; this binder has ${L.capSides}. ${adviceText(b, fitAdvice(b, L))}</div>` : ''}
   </section>
   ${Sync.user ? `<section class="box"><h2>Earlier versions</h2><p class="small muted" style="margin:0">Saved automatically while you're signed in. Restore one if something went wrong.</p><div class="vlist" id="vList"><span class="small muted">Loading…</span></div></section>` : ''}
   <section class="box"><h2>Copy or delete</h2>
@@ -982,14 +1013,14 @@ function toast(msg, action) {
 function commit(msg) { save(); render(); if (msg) toast(msg); }
 
 /* ---------------- add dialog ---------------- */
-const ADD_TABS = [['set', 'Whole set', '📚'], ['range', 'Card range', '🔢'], ['pick', 'Pick cards', '👆'], ['energy', 'Energy', '⚡'], ['title', 'Title / divider', '🏷️'], ['empty', 'Empty pockets', '⬜']];
+const ADD_TABS = [['set', 'Whole set', 'layers'], ['range', 'Card range', 'hash'], ['pick', 'Pick cards', 'pick'], ['energy', 'Energy', 'bolt'], ['title', 'Title / divider', 'tag'], ['empty', 'Empty pockets', 'empty']];
 const A = { tab: 'set', build: null };
 
 function openAdd(beforeSec) {
   const b = cur(), secs = sectionOrder(b);
   const m = openModal(`
     <div class="mhead"><h2>Add to your binder</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-    <div class="seg addtabs" role="tablist">${ADD_TABS.map(([k, l, ic]) => `<button role="tab" data-at="${k}" class="${k === A.tab ? 'on' : ''}" aria-selected="${k === A.tab}"><span class="ic" aria-hidden="true">${ic}</span>${l}</button>`).join('')}</div>
+    <div class="seg addtabs" role="tablist">${ADD_TABS.map(([k, l, icn]) => `<button role="tab" data-at="${k}" class="${k === A.tab ? 'on' : ''}" aria-selected="${k === A.tab}"><span class="ic" aria-hidden="true">${ic(icn)}</span>${l}</button>`).join('')}</div>
     <div id="addBody"></div>
     <div class="where">
       <label>Put it <select class="inp" id="aPos">${secs.length ? '<option value="start">at the start</option>' : ''}<option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
@@ -1041,7 +1072,7 @@ function refreshPreview() {
   if (L.used > L.cap) {
     const a = fitAdvice(b, L);
     box.className = 'preview bad';
-    box.innerHTML = `⚠️ <b>${esc(r.label)} won't all fit.</b> It needs ${plural(ls - fs + 1, 'page side')} (${where}) and you have ${plural(sidesLeft, 'side')} left. ${adviceText(b, a)} You can still add it and fix it later.`;
+    box.innerHTML = `${ic('warn')} <b>${esc(r.label)} won't all fit.</b> It needs ${plural(ls - fs + 1, 'page side')} (${where}) and you have ${plural(sidesLeft, 'side')} left. ${adviceText(b, a)} You can still add it and fix it later.`;
   } else {
     box.className = 'preview';
     box.innerHTML = `✓ <b>${esc(r.label)}</b>: ${plural(pockets, 'pocket')}, on ${where}.${moved}`;
@@ -1189,11 +1220,11 @@ function showAddTab() {
   if (t === 'title') {
     // one simple form: pick a design (or a whole sheet), name it, tick "whole page" if you want
     let color = TITLE_COLORS[0], pick = null;
-    const sheets = sheetChoices().map((c, k) => ({ ...c, key: 'sh' + k, label: '📒 ' + (c.name === 'now' ? (n => n === 1 ? 'My 1 card' : `All ${n} cards`)(c.slots.filter(x => !slotEmpty(x)).length) : c.label), sheet: true }));
+    const sheets = sheetChoices().map((c, k) => ({ ...c, key: 'sh' + k, label: (c.name === 'now' ? (n => n === 1 ? 'My 1 card' : `All ${n} cards`)(c.slots.filter(x => !slotEmpty(x)).length) : c.label), sheet: true }));
     const designs = designChoices(), choices = [...sheets, ...designs];
     body.innerHTML = `<div class="panel">
       <div class="field"><span>Design</span>${choices.length ? designRow(choices.map(c => c.sheet ? { ...c, sl: c.slots[0] } : c), 'none') : noDesignsNote}
-        <span class="small muted" id="tHint">${choices.length ? 'Pick one of your designs, or 📒 to put a whole sheet of cards in at once.' : ''}</span></div>
+        <span class="small muted" id="tHint">${choices.length ? 'Pick one of your designs, or a whole sheet to put all its cards in at once.' : ''}</span></div>
       <div id="tOne">
         <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" enterkeyhint="done" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
         <div class="field" id="tColor"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
@@ -1264,17 +1295,18 @@ function openItem(i) {
       <h2>${esc(it.name)}</h2><p class="muted" style="margin:4px 0 12px">${esc(it.setName || '')} · #${esc(it.num)}<br>${spot}</p>
       <div class="seg hn" id="dOwn" role="group" aria-label="Do you have this card?"><button class="${it.own ? 'on have' : ''}" data-own="1">✓ Have it</button><button class="${it.own ? '' : 'on need'}" data-own="0">Need it</button></div>
       <p class="small muted">${it.own ? 'It goes in this pocket when you sleeve.' : 'Its pocket stays empty until you get it.'}</p></div></div>`;
-  else if (it.k === 'title') top = `<h2 style="margin-bottom:10px">Title / divider</h2><p class="muted small">${spot}</p>
+  else if (it.k === 'title') top = `<p class="muted small" style="margin-top:0">${spot}</p>
       <label class="field"><span>Text</span><input class="inp" id="dText" maxlength="40" value="${esc(it.text)}"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === it.color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
       <div class="field"><span>Size</span><div class="seg" id="dSize"><button data-s="pocket" class="${it.size !== 'page' ? 'on' : ''}">One pocket</button><button data-s="page" class="${it.size === 'page' ? 'on' : ''}">A whole page</button></div></div>
       <div class="field"><span>Design</span><div id="dDesign"></div></div>
-      <button class="btn sm" id="dIns">${it.design ? '✂︎ Put this design on the print sheet' : '✂︎ Make a printable card for this'}</button>`;
+      <button class="btn sm" id="dIns">${ic('scissors')} ${it.design ? 'Put this design on the print sheet' : 'Make a printable card for this'}</button>`;
   else if (it.k === 'energy') top = `<div class="detail"><div class="dimg"><div class="pk energy" style="background:${ENERGY_COLOR[it.type]}"><span class="orb"></span>${esc(it.type)}<img src="${ENERGY_IMG[it.type]}" alt="" onerror="this.remove()"></div></div><div class="grow"><h2>${esc(it.type)} Energy</h2><p class="muted small">Basic energy · ${spot}</p></div></div>`;
-  else top = `<h2>Empty pocket</h2><p class="muted small">${spot}. Saved for later.</p>`;
-  const m = openModal(`<div class="mhead"><span style="flex:1"></span><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
+  else top = `<p class="muted small">${spot}. Saved for later.</p>`;
+  const head = { card: 'Card', energy: 'Energy card', title: 'Title / divider', empty: 'Empty pocket' }[it.k] || 'Pocket';
+  const m = openModal(`<div class="mhead"><h2>${head}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>${top}
     <div class="drow"><button class="btn sm" id="dPrev">◀ Move earlier</button><button class="btn sm" id="dNext">Move later ▶</button></div>
-    <div class="drow"><button class="btn sm" id="dEmpty">＋ Empty pocket before this</button><button class="btn sm danger" id="dDel">Remove</button></div>`);
+    <div class="drow"><button class="btn sm" id="dEmpty">${ic('plus')} Empty pocket before this</button><button class="btn sm danger" id="dDel">Remove</button></div>`);
   $$('#dOwn button', m).forEach(btn => btn.onclick = () => { if (!!+btn.dataset.own !== !!it.own) toggleOwn(i); openItem(i); });
   $('#dText', m) && ($('#dText', m).oninput = e => { it.text = e.target.value; save(); render(); });
   $$('.swatches button', m).forEach(btn => btn.onclick = () => { it.color = btn.dataset.c; commit(); openItem(i); });
@@ -1966,7 +1998,7 @@ try { const q = new URLSearchParams(location.search).get('pro'); if (q === 'prev
 const isPro = () => { try { return localStorage.getItem(PRO_KEY) === '1'; } catch (e) { return false; } };
 const FREE_SAVES = 3, MAX_SAVES = 60;
 function proPitch(why) {
-  openModal(`<div class="mhead"><h2>✨ ${why}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+  openModal(`<div class="mhead"><h2>${ic('sparkle')} ${why}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
     <p>Binder Blueprint Pro is a one-time unlock, about $4. No ads and no subscription, ever.</p>
     <ul class="small" style="margin:0;padding-left:20px;line-height:1.6"><li>Save as many card designs as you like</li><li>Save whole sheets of 9 cards to reprint later</li><li>More Pro extras as they come</li></ul>
     <p class="muted small">Pro isn't available to buy yet. It's coming soon. Free accounts keep ${FREE_SAVES} saved designs.</p>
@@ -2058,7 +2090,7 @@ function savedStrip() {
   const list = ins.saved || [], pro = isPro();
   return `<div class="saved"><h3>My designs ${pro ? '<span class="pro">PRO</span>' : `<span style="font-weight:600;text-transform:none;letter-spacing:0">${designCount()} of ${FREE_SAVES} free</span>`}</h3>
     ${list.length ? `<div class="saved-row">${list.map(x => `<div class="sv"><button class="use" data-sv="${x.id}" aria-label="Use ${esc(x.name)}"><img src="${x.thumb}" alt=""></button>${x.kind === 'sheet' ? '<span class="badge">Sheet</span>' : x.kind === 'page' ? '<span class="badge">Page</span>' : ''}<button class="more" data-svm="${x.id}" aria-label="More for ${esc(x.name)}">⋯</button><span class="nm">${esc(x.name)}</span></div>`).join('')}</div>`
-      : `<p class="hint">Your sheet saves by itself. To keep a card's look for later, tap the ☆ on it. Saved designs show up here, and you can pick them for titles in your binders.</p>`}
+      : `<p class="hint">Your sheet saves by itself. To keep a card's look for later, tap the ${ic('star')} on it. Saved designs show up here, and you can pick them for titles in your binders.</p>`}
   </div>`;
 }
 
@@ -2068,7 +2100,7 @@ function designChoices() {
   const out = [];
   ins.slots.forEach((sl, k) => { if (!slotEmpty(sl)) out.push({ key: 'c' + k, label: sl.text || `Card ${k + 1}`, sl }); });
   if (ins.page && !slotEmpty(ins.page)) out.push({ key: 'pg', label: ins.page.text || 'Page design', sl: ins.page });
-  (ins.saved || []).filter(x => x.kind !== 'sheet').forEach(x => out.push({ key: 's' + x.id, label: '☆ ' + x.name, sl: x.design }));
+  (ins.saved || []).filter(x => x.kind !== 'sheet').forEach(x => out.push({ key: 's' + x.id, label: x.name, sl: x.design }));
   return out;
 }
 function designRow(choices, onKey) {
@@ -2105,7 +2137,7 @@ function sheetToBinder() {   // pick a binder, then open its Add dialog ready to
   if (!bs.length) return toast('Make a binder first (on My binders).');
   if (bs.length === 1) return open(bs[0].id);
   const m = openModal(`<div class="mhead"><h2>Put your cards in…</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-    <div class="ie-btns" style="flex-direction:column">${bs.map(b => `<button class="btn" data-pb="${b.id}" style="justify-content:flex-start">📒 ${esc(b.name)}</button>`).join('')}</div>`);
+    <div class="ie-btns" style="flex-direction:column">${bs.map(b => `<button class="btn" data-pb="${b.id}" style="justify-content:flex-start">${ic('binder')} ${esc(b.name)}</button>`).join('')}</div>`);
   $$('[data-pb]', m).forEach(x => x.onclick = () => open(x.dataset.pb));
 }
 function sheetChoices() {   // the sheet you have now, plus any saved sheets
@@ -2157,7 +2189,7 @@ function confirmRandom(sl, roll, back) {
   const m = openModal(`<div class="mhead"><h2>Try a new look?</h2></div>
     <p>You've made changes to this ${what}. Surprise me will change its colors, styles and decorations${keepWords ? ', but your words stay' : ''}.</p>
     ${saved ? '<p class="muted small">This design is already in My designs.</p>' : ''}
-    <div class="mfoot"><button class="btn ghost" id="rCancel">Cancel</button>${saved ? '' : '<button class="btn" id="rSave">☆ Save first</button>'}<button class="btn primary" id="rGo">🎲 Surprise me</button></div>`);
+    <div class="mfoot"><button class="btn ghost" id="rCancel">Cancel</button>${saved ? '' : `<button class="btn" id="rSave">${ic('star')} Save first</button>`}<button class="btn primary" id="rGo">${ic('dice')} Surprise me</button></div>`);
   $('#rCancel', m).onclick = () => { closeModal(); back?.(); };
   $('#rGo', m).onclick = () => { closeModal(); roll(); };
   $('#rSave', m) && ($('#rSave', m).onclick = () => { closeModal(); saveDesign(sl, roll); });
@@ -2174,16 +2206,16 @@ function renderInserts() {
   $('#main').innerHTML = `
     <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
-      <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
-      <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
+      <label class="btn primary filebtn">${ic('plus')} Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
+      <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>${ic('print')} Print sheet</button>
     </div>
     <div class="ins-more">
-      <button class="btn sm" data-ins-act="tobinder" ${filled ? '' : 'disabled'}>📒 Put in a binder</button>
-      <button class="btn sm" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>☆ Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
+      <button class="btn sm" data-ins-act="tobinder" ${filled ? '' : 'disabled'}>${ic('binder')} Put in a binder</button>
+      <button class="btn sm" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>${ic('star')} Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
       <button class="btn sm ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear sheet</button>
     </div>
     <div class="ins-sheet">${ins.slots.map((s, k) => `<button class="ins-slot ${slotEmpty(s) ? 'empty' : ''}" data-slot="${k}" aria-label="Card ${k + 1}">
-        ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas><span class="qsave${isSavedDesign(s) ? ' done' : ''}" data-save="${k}" role="button" aria-label="Save to My designs">${isSavedDesign(s) ? '★' : '☆'}</span>`}</button>`).join('')}</div>
+        ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas><span class="qsave${isSavedDesign(s) ? ' done' : ''}" data-save="${k}" role="button" aria-label="Save to My designs">${isSavedDesign(s) ? ic('starFill') : ic('star')}</span>`}</button>`).join('')}</div>
     ${savedStrip()}
     <p class="intro">Tap a card to crop its picture, add a title or a set-colored border. Up to 9 cards print on one letter sheet, each exactly 2.5 × 3.5 in, with cut lines. When printing, choose <b>Actual size / 100%</b>.</p>
     <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
@@ -2197,15 +2229,15 @@ function renderWholePage(modeSeg) {
     <div class="ins-mode">${modeSeg}
       <div class="seg" id="insGrid">${[[9, '9-pocket'], [4, '4-pocket'], [12, '12-pocket']].map(([n, l]) => `<button data-g="${n}" class="${sl.grid === n ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="ins-top">
-      <label class="btn primary filebtn">${sl.hasImg ? 'Change picture' : '＋ Add a picture'}<input type="file" accept="image/*" id="insFiles"></label>
-      <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>🖨 Print ${c * r} pieces</button>
+      <label class="btn primary filebtn">${sl.hasImg ? 'Change picture' : ic('plus') + ' Add a picture'}<input type="file" accept="image/*" id="insFiles"></label>
+      <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>${ic('print')} Print ${c * r} pieces</button>
     </div>
     <div class="ins-more">
-      <button class="btn sm" data-ins-act="random">🎲 Surprise me</button>
+      <button class="btn sm" data-ins-act="random">${ic('dice')} Surprise me</button>
       <button class="btn sm ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear page</button>
     </div>
     <button class="ins-whole ${empty ? 'empty' : ''}" data-slot="page" style="--ar:${c * 5}/${r * 7};--ww:${r > c ? 340 : 420}px" aria-label="Whole-page design">
-      ${empty ? '<span>＋ Tap to design one big title page</span>' : `<canvas width="${c * 200}" height="${r * 280}"></canvas>`}
+      ${empty ? `<span>${ic('plus')} Tap to design one big title page</span>` : `<canvas width="${c * 200}" height="${r * 280}"></canvas>`}
       <span class="cuts" style="--c:${c};--r:${r}">${Array.from({ length: c * r }, (_, k) => `<i>${k + 1}</i>`).join('')}</span></button>
     ${savedStrip()}
     <p class="intro">One design spread across a whole binder page. It prints as ${c * r} card-sized pieces (2.5 × 3.5 in each)${c * r > 9 ? ' on 2 sheets' : ''}, laid out just like the page. Cut them apart and slide piece 1 into the top-left pocket, then go across. When printing, choose <b>Actual size / 100%</b>.</p>
@@ -2241,7 +2273,7 @@ function openInsertEditor(k) {
       <div class="ins-canvas-wrap">
         <canvas id="ieCanvas" width="${whole ? 600 : 500}" height="${whole ? Math.round(600 * gr * 7 / (gc * 5)) : 700}" style="aspect-ratio:${gc * 5}/${gr * 7}"></canvas>
         <div class="ie-tools">
-          <label class="btn sm filebtn">${slot.hasImg ? 'Change picture' : '＋ Picture'}<input type="file" accept="image/*" id="ieFile"></label>
+          <label class="btn sm filebtn">${slot.hasImg ? 'Change picture' : ic('plus') + ' Picture'}<input type="file" accept="image/*" id="ieFile"></label>
           ${slot.hasImg ? `<div class="ie-row"><button class="btn sm" id="ieRot">↻ Rotate</button><button class="btn sm" id="ieFit">Center</button></div>
           <label class="ie-zoom"><span>Zoom</span><input type="range" id="ieZoom" min="1" max="4" step="0.01" value="${slot.z}"></label>
           <button class="btn sm danger" id="ieNoImg">Remove picture</button>` : ''}
@@ -2249,7 +2281,7 @@ function openInsertEditor(k) {
         </div>
       </div>
       <div class="ins-controls">
-        <div class="ie-btns"><button class="btn sm" id="ieRandom" type="button">🎲 Surprise me</button><button class="btn sm" id="ieSave" type="button">☆ Save design</button></div>
+        <div class="ie-btns"><button class="btn sm" id="ieRandom" type="button">${ic('dice')} Surprise me</button><button class="btn sm" id="ieSave" type="button">${ic('star')} Save design</button></div>
         <div class="field"><span>Title</span><input class="inp" id="ieText" maxlength="40" value="${esc(slot.text)}" placeholder="Type, or pick a set below" list="ieSets" autocomplete="off" enterkeyhint="done"><datalist id="ieSets"></datalist>
           <button class="btn sm" id="ieUseSet" hidden></button></div>
         <label class="field"><span>Second line <em class="opt">optional</em></span><input class="inp" id="ieSub" maxlength="40" value="${esc(slot.sub || '')}" placeholder="Like “Master set”, “Binder 2” or a year" autocomplete="off" enterkeyhint="done"></label>
@@ -2802,7 +2834,7 @@ function openSignIn() {
     btn.disabled = true; btn.textContent = 'Sending…';
     try { await Sync.sendCode(email); }
     catch (err) { btn.disabled = false; btn.textContent = 'Email me a sign-in link'; return toast(/rate|seconds/i.test(err.message) ? 'Please wait a minute before asking for another email.' : (err.message || 'That didn’t work. Try again.')); }
-    $('#siBox', m).innerHTML = `<p style="margin:0">📬 We sent a sign-in link to <b>${esc(email)}</b>.</p>
+    $('#siBox', m).innerHTML = `<p style="margin:0">${ic('mail')} We sent a sign-in link to <b>${esc(email)}</b>.</p>
       <p class="muted" style="margin:0">Open that email <b>on this ${/Mobi|Android|iPhone|iPad/.test(navigator.userAgent) ? 'phone' : 'computer'}</b> and tap the link. You’ll be signed in right away. It can take a minute to arrive; check spam too.</p>
       <details><summary class="small muted" style="cursor:pointer">The email has a 6-digit code instead?</summary>
       <form id="siCodeForm" class="field" style="margin:8px 0 0"><span>Code</span>
@@ -2856,7 +2888,8 @@ const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const isDark = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
 function paintTheme() {
   const dark = isDark();
-  $('#theme').innerHTML = dark ? `${SUN}Light` : `${MOON}Dark`;
+  $('#theme').innerHTML = `<span class="${dark ? '' : 'on'}">${SUN}</span><span class="${dark ? 'on' : ''}">${MOON}</span>`;
+  $('#theme').setAttribute('aria-label', dark ? 'Dark mode is on. Switch to light mode' : 'Light mode is on. Switch to dark mode');
   $('meta[name=theme-color]').content = dark ? '#0E1619' : '#EEF2F4';
 }
 $('#theme').onclick = () => {
