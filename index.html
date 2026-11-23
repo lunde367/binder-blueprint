@@ -230,6 +230,7 @@ main{display:flex;flex-direction:column;gap:14px}
 .where label{display:flex;flex-direction:column;gap:4px}
 .where select{text-transform:none;letter-spacing:0}
 .preview{border-radius:12px;padding:10px 12px;font-size:14px;margin-top:12px;background:var(--have-bg);border:1px solid var(--have);color:var(--fg)}
+.preview.idle{background:var(--sunk);border-color:var(--line);color:var(--muted)}
 .preview.bad{background:var(--need-bg);border-color:var(--need)}
 .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;max-height:300px;overflow:auto}
 .results{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px 8px;max-height:min(46vh,380px)}
@@ -286,6 +287,7 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .btile.tool{grid-template-columns:auto 1fr auto}
 .ticon{width:36px;height:50px;border-radius:5px;background:var(--foil);display:grid;place-items:center;font-size:18px;color:#1b2a30}
 .ins-top{display:flex;gap:8px;flex-wrap:wrap}
+.ins-more{display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px}
 .filebtn{position:relative;overflow:hidden;display:inline-flex;align-items:center;cursor:pointer}
 .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
 .ins-sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;max-width:520px;width:100%;align-self:center}
@@ -303,12 +305,12 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .qsave{position:absolute;top:4px;right:4px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:16px;display:grid;place-items:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .qsave.done{background:#F2C230;color:#15232B}
 .dpick{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px}
-.dpick button{flex:none;width:62px;border:2px solid transparent;border-radius:7px;padding:2px;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg);font:600 10px var(--body)}
+.dpick button{flex:none;width:72px;border:2px solid transparent;border-radius:7px;padding:2px;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg);font:600 10px var(--body)}
 .dpick button.on{border-color:var(--accent)}
 .dpick canvas,.dpick .none{width:54px;height:76px;border-radius:4px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .dpick img.sthumb{width:54px;height:76px;border-radius:4px;display:block;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);object-fit:cover}
 .dpick .none{display:grid;place-items:center;background:var(--sunk);font-size:20px;color:var(--muted);box-shadow:none;border:1px dashed var(--line)}
-.dpick span{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dpick span{max-width:70px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:center;line-height:1.2;min-height:2.4em;word-break:break-word}
 .pk.title.has-design{padding:0;background-size:cover!important;background-position:center!important;color:transparent;text-shadow:none}
 .titlepage.has-design{background-size:cover!important;background-position:center!important}
 .titlepage.has-design > span{display:none}
@@ -993,7 +995,7 @@ function openAdd(beforeSec) {
       <label>Put it <select class="inp" id="aPos">${secs.length ? '<option value="start">at the start</option>' : ''}<option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
       <label>Start it on <select class="inp" id="aStart"><option value="here">the next free pocket</option><option value="page">a fresh page</option>${b.spreads ? '<option value="spread">a fresh spread (left page)</option>' : ''}</select></label>
     </div>
-    <div id="addPreview" class="preview">Pick something to add.</div>
+    <div id="addPreview" class="preview idle">Pick something to add.</div>
     <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="addGo" disabled>Add to binder</button></div>`, true);
   A.posTouched = !!beforeSec; A.startTouched = false;
   $('#aStart', m).addEventListener('change', () => { A.startTouched = true; });
@@ -1025,7 +1027,7 @@ function pendingItems() {
 function refreshPreview() {
   const box = $('#addPreview'), go = $('#addGo'); if (!box) return;
   const r = pendingItems();
-  if (!r) { box.className = 'preview'; box.textContent = 'Pick something to add.'; go.disabled = true; return; }
+  if (!r) { box.className = 'preview idle'; box.textContent = 'Pick something to add.'; go.disabled = true; return; }
   const b = cur(), idx = insertIndex(b, $('#aPos').value);
   const items = [...b.items.slice(0, idx), ...r.items.map(x => ({ ...x, _new: 1 })), ...b.items.slice(idx)];
   const L = layout(b, items), before = layout(b);
@@ -1187,7 +1189,7 @@ function showAddTab() {
   if (t === 'title') {
     // one simple form: pick a design (or a whole sheet), name it, tick "whole page" if you want
     let color = TITLE_COLORS[0], pick = null;
-    const sheets = sheetChoices().map((c, k) => ({ ...c, key: 'sh' + k, label: '📒 ' + (c.name === 'now' ? `All ${c.slots.filter(x => !slotEmpty(x)).length} cards` : c.label), sheet: true }));
+    const sheets = sheetChoices().map((c, k) => ({ ...c, key: 'sh' + k, label: '📒 ' + (c.name === 'now' ? (n => n === 1 ? 'My 1 card' : `All ${n} cards`)(c.slots.filter(x => !slotEmpty(x)).length) : c.label), sheet: true }));
     const designs = designChoices(), choices = [...sheets, ...designs];
     body.innerHTML = `<div class="panel">
       <div class="field"><span>Design</span>${choices.length ? designRow(choices.map(c => c.sheet ? { ...c, sl: c.slots[0] } : c), 'none') : noDesignsNote}
@@ -2173,14 +2175,16 @@ function renderInserts() {
     <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
       <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
-      <button class="btn" data-ins-act="tobinder" ${filled ? '' : 'disabled'}>📒 Put in a binder</button>
-      <button class="btn" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>☆ Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
       <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
-      <button class="btn ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear</button>
     </div>
-    ${savedStrip()}
+    <div class="ins-more">
+      <button class="btn sm" data-ins-act="tobinder" ${filled ? '' : 'disabled'}>📒 Put in a binder</button>
+      <button class="btn sm" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>☆ Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
+      <button class="btn sm ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear sheet</button>
+    </div>
     <div class="ins-sheet">${ins.slots.map((s, k) => `<button class="ins-slot ${slotEmpty(s) ? 'empty' : ''}" data-slot="${k}" aria-label="Card ${k + 1}">
         ${slotEmpty(s) ? `<span>＋</span>` : `<canvas width="250" height="350"></canvas><span class="qsave${isSavedDesign(s) ? ' done' : ''}" data-save="${k}" role="button" aria-label="Save to My designs">${isSavedDesign(s) ? '★' : '☆'}</span>`}</button>`).join('')}</div>
+    ${savedStrip()}
     <p class="intro">Tap a card to crop its picture, add a title or a set-colored border. Up to 9 cards print on one letter sheet, each exactly 2.5 × 3.5 in, with cut lines. When printing, choose <b>Actual size / 100%</b>.</p>
     <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
   $$('.ins-slot canvas').forEach(c => paintSlotCanvas(c, ins.slots[+c.parentNode.dataset.slot]));
@@ -2194,14 +2198,16 @@ function renderWholePage(modeSeg) {
       <div class="seg" id="insGrid">${[[9, '9-pocket'], [4, '4-pocket'], [12, '12-pocket']].map(([n, l]) => `<button data-g="${n}" class="${sl.grid === n ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="ins-top">
       <label class="btn primary filebtn">${sl.hasImg ? 'Change picture' : '＋ Add a picture'}<input type="file" accept="image/*" id="insFiles"></label>
-      <button class="btn" data-ins-act="random">🎲 Surprise me</button>
       <button class="btn" data-ins-act="print" ${empty ? 'disabled' : ''}>🖨 Print ${c * r} pieces</button>
-      <button class="btn ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear</button>
     </div>
-    ${savedStrip()}
+    <div class="ins-more">
+      <button class="btn sm" data-ins-act="random">🎲 Surprise me</button>
+      <button class="btn sm ghost danger" data-ins-act="clear" ${empty ? 'disabled' : ''}>Clear page</button>
+    </div>
     <button class="ins-whole ${empty ? 'empty' : ''}" data-slot="page" style="--ar:${c * 5}/${r * 7};--ww:${r > c ? 340 : 420}px" aria-label="Whole-page design">
       ${empty ? '<span>＋ Tap to design one big title page</span>' : `<canvas width="${c * 200}" height="${r * 280}"></canvas>`}
       <span class="cuts" style="--c:${c};--r:${r}">${Array.from({ length: c * r }, (_, k) => `<i>${k + 1}</i>`).join('')}</span></button>
+    ${savedStrip()}
     <p class="intro">One design spread across a whole binder page. It prints as ${c * r} card-sized pieces (2.5 × 3.5 in each)${c * r > 9 ? ' on 2 sheets' : ''}, laid out just like the page. Cut them apart and slide piece 1 into the top-left pocket, then go across. When printing, choose <b>Actual size / 100%</b>.</p>
     <p class="foot">For your own pictures, titles and dividers only. Please don't use it to print copies of real cards.</p>`;
   const cv = $('.ins-whole canvas'); if (cv) paintSlotCanvas(cv, sl);
