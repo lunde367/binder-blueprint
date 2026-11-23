@@ -1,0 +1,9 @@
+{
+  "appId": "com.kitchentablegames.binderblueprint",
+  "appName": "Binder Blueprint",
+  "webDir": "www",
+  "backgroundColor": "#EEF2F4",
+  "android": {
+    "backgroundColor": "#EEF2F4"
+  }
+}

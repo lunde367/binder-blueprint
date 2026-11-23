@@ -480,6 +480,14 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hue = s => { let h = 0; for (const c of String(s)) h = (h*31 + c.charCodeAt(0)) % 360; return h; };
 const plural = (n, w, p) => `${n} ${n === 1 ? w : (p || w + 's')}`;
+// true inside the Android / iPhone app (Capacitor), false on the website
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const APP_LINK = 'binderblueprint://auth';   // the email sign-in link opens the app here
+if (NATIVE) {
+  const App = window.Capacitor.Plugins.App;
+  App?.addListener('appUrlOpen', ({ url }) => { if (url && url.startsWith('binderblueprint://')) Sync.fromAppLink(url); });
+  App?.getLaunchUrl?.().then(r => { if (r?.url && r.url.startsWith('binderblueprint://')) setTimeout(() => Sync.fromAppLink(r.url), 500); }).catch(() => {});
+}
 const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 
 /* ---------------- storage ---------------- */
@@ -1998,11 +2006,13 @@ try { const q = new URLSearchParams(location.search).get('pro'); if (q === 'prev
 const isPro = () => { try { return localStorage.getItem(PRO_KEY) === '1'; } catch (e) { return false; } };
 const FREE_SAVES = 3, MAX_SAVES = 60;
 function proPitch(why) {
-  openModal(`<div class="mhead"><h2>${ic('sparkle')} ${why}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+  const m = openModal(`<div class="mhead"><h2>${ic('sparkle')} ${why}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
     <p>Binder Blueprint Pro is a one-time unlock, about $4. No ads and no subscription, ever.</p>
     <ul class="small" style="margin:0;padding-left:20px;line-height:1.6"><li>Save as many card designs as you like</li><li>Save whole sheets of 9 cards to reprint later</li><li>More Pro extras as they come</li></ul>
-    <p class="muted small">Pro isn't available to buy yet. It's coming soon. Free accounts keep ${FREE_SAVES} saved designs.</p>
+    <p class="muted small">You'll need to sign in to get Pro, so it stays with your account on every phone, tablet and computer. Pro isn't available to buy yet. It's coming soon. Without Pro you can keep ${FREE_SAVES} saved designs.</p>
+    ${Sync.user ? '' : `<button class="btn" id="proSignIn" style="margin-top:4px">Sign in</button>`}
     <div class="mfoot"><button class="btn primary" data-close>OK</button></div>`);
+  $('#proSignIn', m) && ($('#proSignIn', m).onclick = () => { closeModal(); openSignIn(); });
 }
 
 /* ---------- saved designs ---------- */
@@ -2417,9 +2427,14 @@ async function printInserts() {
   await Promise.all($$('#ins-print img').map(im => im.decode?.().catch(() => {})));
   printWith('inserts');
 }
-function printWith(kind) {
+async function printWith(kind) {
   $('#pagestyle').textContent = kind === 'inserts' ? '@page{size:letter;margin:0}' : '@page{size:letter;margin:0.4in}';
   document.body.classList.toggle('print-ins', kind === 'inserts');
+  if (NATIVE) {   // the app's own print screen; keep the print layout until the job is done
+    try { await window.Capacitor.Plugins.Printer.print({ name: kind === 'inserts' ? 'Binder Blueprint inserts' : 'Binder Blueprint sleeving guide' }); }
+    catch (err) { toast('Printing isn\'t available on this phone.'); }
+    document.body.classList.remove('print-ins'); return;
+  }
   try { window.print(); } catch (err) { toast('Your browser blocked printing.'); }
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('print-ins'));
@@ -2572,6 +2587,16 @@ const Sync = {
         return this.sb;
       } catch (e) { this.loading = null; this.setStatus('offline'); return null; }
     })();
+  },
+  async fromAppLink(url) {   // the email link opened the app: binderblueprint://auth#access_token=…
+    const h = new URLSearchParams((url.split('#')[1] || url.split('?')[1] || ''));
+    if (h.get('error_description')) return toast('That sign-in link expired or was already used. Ask for a new one.');
+    const access_token = h.get('access_token'), refresh_token = h.get('refresh_token');
+    if (!access_token || !refresh_token) return;
+    const sb = await this.load(); if (!sb) return toast('Couldn\'t reach the internet. Try the link again.');
+    const { error } = await sb.auth.setSession({ access_token, refresh_token });
+    if (error) return toast('That sign-in link didn\'t work. Ask for a new one.');
+    closeModal(); toast('Signed in. Your binders are saving to your account.');
   },
 
   async start() {
@@ -2762,7 +2787,7 @@ const Sync = {
   /* ---- sign in / out ---- */
   async sendCode(email) {
     const sb = await this.load(); if (!sb) throw new Error('Can’t reach the sign-in service. Check your internet.');
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: NATIVE ? APP_LINK : location.origin + location.pathname } });
     if (error) throw error;
   },
   async verify(email, token) {

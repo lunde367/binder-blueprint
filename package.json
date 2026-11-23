@@ -1,0 +1,22 @@
+{
+  "name": "binder-blueprint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plan your real card binder before you sleeve a single card.",
+  "scripts": {
+    "web": "node scripts/app-web.mjs",
+    "assets": "npx @capacitor/assets generate --iconBackgroundColor \"#0E7C86\" --iconBackgroundColorDark \"#0E7C86\" --splashBackgroundColor \"#EEF2F4\" --splashBackgroundColorDark \"#0E1619\"",
+    "app:setup": "node scripts/app-setup.mjs",
+    "android": "npm run web && npx cap sync android && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/assets": "^3.0.5"
+  }
+}
