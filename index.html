@@ -1185,57 +1185,55 @@ function showAddTab() {
     };
   } else body.onclick = null;
   if (t === 'title') {
-    let color = TITLE_COLORS[0];
-    const sheets = sheetChoices();
+    // one simple form: pick a design (or a whole sheet), name it, tick "whole page" if you want
+    let color = TITLE_COLORS[0], pick = null;
+    const sheets = sheetChoices().map((c, k) => ({ ...c, key: 'sh' + k, label: '📒 ' + (c.name === 'now' ? `All ${c.slots.filter(x => !slotEmpty(x)).length} cards` : c.label), sheet: true }));
+    const designs = designChoices(), choices = [...sheets, ...designs];
     body.innerHTML = `<div class="panel">
-      <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button>${sheets.length ? '<button data-s="sheet">📒 My sheet of cards</button>' : ''}</div></div>
-      <div id="tSheet" hidden><div class="field" style="margin-bottom:0"><span>Which cards?</span>${designRow(sheets.map(c => ({ ...c, sl: c.slots[0] })), null)}
-        <span class="small muted">Puts each card in its own pocket, in the same order as on the sheet, with its design. Empty spots stay empty pockets.</span></div></div>
+      <div class="field"><span>Design</span>${choices.length ? designRow(choices.map(c => c.sheet ? { ...c, sl: c.slots[0] } : c), 'none') : noDesignsNote}
+        <span class="small muted" id="tHint">${choices.length ? 'Pick one of your designs, or 📒 to put a whole sheet of cards in at once.' : ''}</span></div>
       <div id="tOne">
-      <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" enterkeyhint="done" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
-      <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
+        <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" enterkeyhint="done" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
+        <div class="field" id="tColor"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
+        <label class="switch" style="margin-bottom:12px"><input type="checkbox" id="tPage"> Fill a whole page</label>
       </div>
       <div class="field" style="margin-bottom:0"><span id="tThenLbl">After the title…</span>
-        <select class="inp" id="tThen"><option value="continue">continue right after it</option><option value="page">start the next part on a fresh page</option>${cur().spreads ? '<option value="spread">start the next part on a fresh spread</option>' : ''}</select></div>
-      <div class="field tone" style="margin:12px 0 0"><span>Design <em class="opt">optional</em></span><div id="tDesign"></div></div></div>`;
-    $('#tOne').append($('.tone', body));   // the Design row belongs with the one-title fields
-    let size = 'pocket', sheetPick = sheets[0];
-    A.designSrcs = null;
-    $$('#tSheet [data-dk]').forEach((btn, k) => {
-      const cv = $('canvas', btn); if (cv) cv.replaceWith(Object.assign(new Image(), { className: 'sthumb', alt: '' }));
-      const im = $('img', btn); if (sheets[k].thumb) im.src = sheets[k].thumb; else sheetThumb(sheets[k].slots).then(u => { im.src = u; sheets[k].thumb = u; });
-      btn.classList.toggle('on', k === 0);
-      btn.onclick = () => { sheetPick = sheets[k]; $$('#tSheet [data-dk]').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); };
+        <select class="inp" id="tThen"><option value="continue">continue right after it</option><option value="page">start the next part on a fresh page</option>${cur().spreads ? '<option value="spread">start the next part on a fresh spread</option>' : ''}</select></div></div>`;
+    A.designSrc = null; A.designSrcs = null;
+    // sheet choices show a little 3×3 picture; single designs paint their own preview
+    $$('.dpick [data-dk]', body).forEach(btn => {
+      const c = choices.find(x => x.key === btn.dataset.dk); if (!c) return;
+      const cv = $('canvas', btn);
+      if (c.sheet) { const im = Object.assign(new Image(), { className: 'sthumb', alt: '' }); cv.replaceWith(im); if (c.thumb) im.src = c.thumb; else sheetThumb(c.slots).then(u => { im.src = u; c.thumb = u; }); }
+      else paintSlotCanvas(cv, c.sl);
     });
-    const choices = designChoices(); A.designSrc = null;
-    $('#tDesign').innerHTML = choices.length ? designRow(choices, 'none') : noDesignsNote;
-    paintDesignRow(body, choices);
-    $$('#tDesign [data-dk]').forEach(btn => btn.onclick = () => {
-      const c = choices.find(x => x.key === btn.dataset.dk); A.designSrc = c ? c.sl : null;
-      $$('#tDesign [data-dk]').forEach(x => x.classList.toggle('on', x === btn));
-      if (c && !$('#tText').value.trim() && c.sl.text) $('#tText').value = c.sl.text;
+    $$('.dpick [data-dk]', body).forEach(btn => btn.onclick = () => {
+      pick = choices.find(x => x.key === btn.dataset.dk) || null;
+      $$('.dpick [data-dk]', body).forEach(x => x.classList.toggle('on', x === btn));
+      const sheet = !!pick?.sheet;
+      $('#tOne').hidden = sheet;
+      $('#tColor').hidden = !!pick;   // a design brings its own colors
+      $('#tThenLbl').textContent = sheet ? 'After the cards…' : 'After the title…';
+      if (sheet && !A.startTouched) $('#aStart').value = 'page';   // a sheet looks best on its own page
+      if (pick && !sheet) { $('#tText').value = pick.sl.text || $('#tText').value; if (pick.key === 'pg') $('#tPage').checked = true; }
       refreshPreview();
     });
     $$('.swatches button', body).forEach(btn => btn.onclick = () => { color = btn.dataset.c; $$('.swatches button', body).forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
-    $$('#tSize button').forEach(btn => btn.onclick = () => {
-      size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn));
-      $('#tOne').hidden = size === 'sheet'; $('#tSheet').hidden = size !== 'sheet';
-      $('#tThenLbl').textContent = size === 'sheet' ? 'After the cards…' : 'After the title…';
-      if (size === 'sheet' && $('#aStart') && !A.startTouched) $('#aStart').value = 'page';   // a sheet looks best on its own page
-      refreshPreview();
-    });
-    $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview;
+    $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview; $('#tPage').onchange = refreshPreview;
+    A.pickSheet = () => { const b = $('.dpick [data-dk="sh0"]', body); if (b) b.click(); };
     A.build = () => {
       const typed = $('#tText').value.trim(), text = typed || 'Title', then = $('#tThen').value;
-      if (size === 'sheet' && sheetPick) {
-        const slots = sheetPick.slots.slice(); while (slots.length && slotEmpty(slots[slots.length - 1])) slots.pop();   // no empty pockets at the end
-        A.designSrcs = slots.filter(x => !slotEmpty(x));
+      const brk = then !== 'continue' ? [{ k: 'break', to: then }] : [];
+      if (pick?.sheet) {
+        const slots = pick.slots.slice(); while (slots.length && slotEmpty(slots[slots.length - 1])) slots.pop();   // no empty pockets at the end
+        A.designSrcs = slots.filter(x => !slotEmpty(x)); A.designSrc = null;
         const n = A.designSrcs.length;
-        return { label: sheetPick.name === 'now' ? `My ${plural(n, 'title card')}` : `${sheetPick.label} (${plural(n, 'card')})`,
-          items: [...slots.map(x => slotEmpty(x) ? { k: 'empty' } : { k: 'title', text: x.text || 'Title', color: x.bg || TITLE_COLORS[0], size: 'pocket' }), ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
+        return { label: pick.name === 'now' ? `My ${plural(n, 'title card')}` : `${pick.name} (${plural(n, 'card')})`,
+          items: [...slots.map(x => slotEmpty(x) ? { k: 'empty' } : { k: 'title', text: x.text || 'Title', color: x.bg || TITLE_COLORS[0], size: 'pocket' }), ...brk] };
       }
-      A.designSrcs = null;
-      return { label: typed ? `Title “${typed}”` : (size === 'page' ? 'A title page' : 'A title card'), items: [{ k: 'title', text, color, size }, ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
+      A.designSrcs = null; A.designSrc = pick ? pick.sl : null;
+      const size = $('#tPage').checked ? 'page' : 'pocket';
+      return { label: typed ? `Title “${typed}”` : (size === 'page' ? 'A title page' : 'A title card'), items: [{ k: 'title', text, color: pick ? (pick.sl.bg || color) : color, size }, ...brk] };
     };
     refreshPreview();
   }
@@ -2100,7 +2098,7 @@ async function refreshTitleThumbs(b, all) {   // redo whole-page previews (older
 }
 setTimeout(async () => { let n = 0; for (const b of store.binders || []) n += await refreshTitleThumbs(b); if (n) { save(); render(); } }, 1500);
 function sheetToBinder() {   // pick a binder, then open its Add dialog ready to drop the sheet in at the front
-  const open = id => { store.cur = id; save(); closeModal(); go('binder'); A.tab = 'title'; openAdd(); $('#tSize [data-s="sheet"]')?.click(); if ($('#aPos').querySelector('[value=start]')) $('#aPos').value = 'start'; $('#aStart').value = 'here'; refreshPreview(); };
+  const open = id => { store.cur = id; save(); closeModal(); go('binder'); A.tab = 'title'; openAdd(); A.pickSheet?.(); if ($('#aPos').querySelector('[value=start]')) $('#aPos').value = 'start'; $('#aStart').value = 'here'; refreshPreview(); };
   const bs = store.binders || [];
   if (!bs.length) return toast('Make a binder first (on My binders).');
   if (bs.length === 1) return open(bs[0].id);
