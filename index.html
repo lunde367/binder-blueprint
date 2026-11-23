@@ -306,6 +306,7 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .dpick button{flex:none;width:62px;border:2px solid transparent;border-radius:7px;padding:2px;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg);font:600 10px var(--body)}
 .dpick button.on{border-color:var(--accent)}
 .dpick canvas,.dpick .none{width:54px;height:76px;border-radius:4px;display:block;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.dpick img.sthumb{width:54px;height:76px;border-radius:4px;display:block;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);object-fit:cover}
 .dpick .none{display:grid;place-items:center;background:var(--sunk);font-size:20px;color:var(--muted);box-shadow:none;border:1px dashed var(--line)}
 .dpick span{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk.title.has-design{padding:0;background-size:cover!important;background-position:center!important;color:transparent;text-shadow:none}
@@ -994,7 +995,8 @@ function openAdd(beforeSec) {
     </div>
     <div id="addPreview" class="preview">Pick something to add.</div>
     <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="addGo" disabled>Add to binder</button></div>`, true);
-  A.posTouched = !!beforeSec;
+  A.posTouched = !!beforeSec; A.startTouched = false;
+  $('#aStart', m).addEventListener('change', () => { A.startTouched = true; });
   m.classList.add('addm');
   $$('[data-at]', m).forEach(btn => btn.onclick = () => { A.tab = btn.dataset.at; $$('[data-at]', m).forEach(x => { x.classList.toggle('on', x === btn); x.setAttribute('aria-selected', x === btn); }); showAddTab(); });
   $('#aPos', m).onchange = () => { A.posTouched = true; refreshPreview(); };
@@ -1051,9 +1053,12 @@ function doAdd() {
   b.sections[sec] = { label: r.label, ...(r.kind ? { kind: r.kind } : {}) };
   const added = r.items.map(x => ({ ...x, sec }));
   b.items.splice(idx, 0, ...added);
-  const src = A.tab === 'title' ? A.designSrc : null; A.designSrc = null;
+  const srcs = A.tab === 'title' ? (A.designSrcs || (A.designSrc ? [A.designSrc] : [])) : []; A.designSrc = null; A.designSrcs = null;
   closeModal();
-  if (src) { const t = added.find(x => x.k === 'title'); if (t) attachDesign(b, t, src).then(() => { save(); render(); }); }
+  if (srcs.length) {
+    const titles = added.filter(x => x.k === 'title');
+    (async () => { for (let k = 0; k < titles.length && k < srcs.length; k++) await attachDesign(b, titles[k], srcs[k]); save(); render(); })();
+  }
   if (tab !== 'contents' && tab !== 'binder') { save(); toast(`Added ${r.label}`); return go('binder'); }
   commit(`Added ${r.label}`);
 }
@@ -1181,14 +1186,27 @@ function showAddTab() {
   } else body.onclick = null;
   if (t === 'title') {
     let color = TITLE_COLORS[0];
+    const sheets = sheetChoices();
     body.innerHTML = `<div class="panel">
+      <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button>${sheets.length ? '<button data-s="sheet">📒 My sheet of cards</button>' : ''}</div></div>
+      <div id="tSheet" hidden><div class="field" style="margin-bottom:0"><span>Which cards?</span>${designRow(sheets.map(c => ({ ...c, sl: c.slots[0] })), null)}
+        <span class="small muted">Puts each card in its own pocket, in the same order as on the sheet, with its design. Empty spots stay empty pockets.</span></div></div>
+      <div id="tOne">
       <label class="field"><span>Title text</span><input class="inp" id="tText" maxlength="40" enterkeyhint="done" placeholder="e.g. Kanto Friends, Josie's Favorites"></label>
       <div class="field"><span>Color</span><div class="swatches">${TITLE_COLORS.map(c => `<button style="background:${c}" data-c="${c}" class="${c === color ? 'on' : ''}" aria-label="color"></button>`).join('')}</div></div>
-      <div class="field"><span>Size</span><div class="seg" id="tSize"><button data-s="pocket" class="on">One pocket</button><button data-s="page">A whole page</button></div></div>
-      <div class="field" style="margin-bottom:0"><span>After the title…</span>
+      </div>
+      <div class="field" style="margin-bottom:0"><span id="tThenLbl">After the title…</span>
         <select class="inp" id="tThen"><option value="continue">continue right after it</option><option value="page">start the next part on a fresh page</option>${cur().spreads ? '<option value="spread">start the next part on a fresh spread</option>' : ''}</select></div>
-      <div class="field" style="margin:12px 0 0"><span>Design <em class="opt">optional</em></span><div id="tDesign"></div></div></div>`;
-    let size = 'pocket';
+      <div class="field tone" style="margin:12px 0 0"><span>Design <em class="opt">optional</em></span><div id="tDesign"></div></div></div>`;
+    $('#tOne').append($('.tone', body));   // the Design row belongs with the one-title fields
+    let size = 'pocket', sheetPick = sheets[0];
+    A.designSrcs = null;
+    $$('#tSheet [data-dk]').forEach((btn, k) => {
+      const cv = $('canvas', btn); if (cv) cv.replaceWith(Object.assign(new Image(), { className: 'sthumb', alt: '' }));
+      const im = $('img', btn); if (sheets[k].thumb) im.src = sheets[k].thumb; else sheetThumb(sheets[k].slots).then(u => { im.src = u; sheets[k].thumb = u; });
+      btn.classList.toggle('on', k === 0);
+      btn.onclick = () => { sheetPick = sheets[k]; $$('#tSheet [data-dk]').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); };
+    });
     const choices = designChoices(); A.designSrc = null;
     $('#tDesign').innerHTML = choices.length ? designRow(choices, 'none') : noDesignsNote;
     paintDesignRow(body, choices);
@@ -1199,10 +1217,24 @@ function showAddTab() {
       refreshPreview();
     });
     $$('.swatches button', body).forEach(btn => btn.onclick = () => { color = btn.dataset.c; $$('.swatches button', body).forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
-    $$('#tSize button').forEach(btn => btn.onclick = () => { size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn)); refreshPreview(); });
+    $$('#tSize button').forEach(btn => btn.onclick = () => {
+      size = btn.dataset.s; $$('#tSize button').forEach(x => x.classList.toggle('on', x === btn));
+      $('#tOne').hidden = size === 'sheet'; $('#tSheet').hidden = size !== 'sheet';
+      $('#tThenLbl').textContent = size === 'sheet' ? 'After the cards…' : 'After the title…';
+      if (size === 'sheet' && $('#aStart') && !A.startTouched) $('#aStart').value = 'page';   // a sheet looks best on its own page
+      refreshPreview();
+    });
     $('#tText').oninput = refreshPreview; $('#tThen').onchange = refreshPreview;
     A.build = () => {
       const typed = $('#tText').value.trim(), text = typed || 'Title', then = $('#tThen').value;
+      if (size === 'sheet' && sheetPick) {
+        const slots = sheetPick.slots.slice(); while (slots.length && slotEmpty(slots[slots.length - 1])) slots.pop();   // no empty pockets at the end
+        A.designSrcs = slots.filter(x => !slotEmpty(x));
+        const n = A.designSrcs.length;
+        return { label: sheetPick.name === 'now' ? `My ${plural(n, 'title card')}` : `${sheetPick.label} (${plural(n, 'card')})`,
+          items: [...slots.map(x => slotEmpty(x) ? { k: 'empty' } : { k: 'title', text: x.text || 'Title', color: x.bg || TITLE_COLORS[0], size: 'pocket' }), ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
+      }
+      A.designSrcs = null;
       return { label: typed ? `Title “${typed}”` : (size === 'page' ? 'A title page' : 'A title card'), items: [{ k: 'title', text, color, size }, ...(then !== 'continue' ? [{ k: 'break', to: then }] : [])] };
     };
     refreshPreview();
@@ -2067,6 +2099,21 @@ async function refreshTitleThumbs(b, all) {   // redo whole-page previews (older
   return n;
 }
 setTimeout(async () => { let n = 0; for (const b of store.binders || []) n += await refreshTitleThumbs(b); if (n) { save(); render(); } }, 1500);
+function sheetToBinder() {   // pick a binder, then open its Add dialog ready to drop the sheet in at the front
+  const open = id => { store.cur = id; save(); closeModal(); go('binder'); A.tab = 'title'; openAdd(); $('#tSize [data-s="sheet"]')?.click(); if ($('#aPos').querySelector('[value=start]')) $('#aPos').value = 'start'; $('#aStart').value = 'here'; refreshPreview(); };
+  const bs = store.binders || [];
+  if (!bs.length) return toast('Make a binder first (on My binders).');
+  if (bs.length === 1) return open(bs[0].id);
+  const m = openModal(`<div class="mhead"><h2>Put your cards in…</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="ie-btns" style="flex-direction:column">${bs.map(b => `<button class="btn" data-pb="${b.id}" style="justify-content:flex-start">📒 ${esc(b.name)}</button>`).join('')}</div>`);
+  $$('[data-pb]', m).forEach(x => x.onclick = () => open(x.dataset.pb));
+}
+function sheetChoices() {   // the sheet you have now, plus any saved sheets
+  const out = [];
+  if (ins.slots.some(x => !slotEmpty(x))) out.push({ key: 'now', name: 'now', label: 'My sheet now', slots: ins.slots });
+  (ins.saved || []).filter(x => x.kind === 'sheet').forEach(x => out.push({ key: 'S' + x.id, name: x.name, label: x.name, slots: x.slots, thumb: x.thumb }));
+  return out;
+}
 const noDesignsNote = `<p class="small muted" style="margin:0">No designs yet. Make one in <b>Title & divider cards</b> (on My binders), then pick it here.</p>`;
 
 // a whole-page design, cut into its pockets (with the gaps between pockets) so you see it as it'll look sleeved
@@ -2128,6 +2175,7 @@ function renderInserts() {
     <div class="ins-mode">${modeSeg}</div>
     <div class="ins-top">
       <label class="btn primary filebtn">＋ Add pictures<input type="file" accept="image/*" multiple id="insFiles"></label>
+      <button class="btn" data-ins-act="tobinder" ${filled ? '' : 'disabled'}>📒 Put in a binder</button>
       <button class="btn" data-ins-act="savesheet" ${filled ? '' : 'disabled'}>☆ Save sheet${isPro() ? '' : ' <span class="opt">Pro</span>'}</button>
       <button class="btn" data-ins-act="print" ${filled ? '' : 'disabled'}>🖨 Print sheet</button>
       <button class="btn ghost danger" data-ins-act="clear" ${filled ? '' : 'disabled'}>Clear</button>
@@ -2400,6 +2448,7 @@ $('#main').addEventListener('click', e => {
   if (t.dataset.slot !== undefined) return openInsertEditor(t.dataset.slot === 'page' ? 'page' : +t.dataset.slot);
   if (t.dataset.insAct === 'print') return printInserts();
   if (t.dataset.insAct === 'savesheet') return saveSheet();
+  if (t.dataset.insAct === 'tobinder') return sheetToBinder();
   if (t.dataset.insAct === 'random') return confirmRandom(ins.page, () => { randomDesign(ins.page, { words: wordsAreRandom(ins.page) }); saveIns(); render(); });
   if (t.dataset.insAct === 'clear' && ins.mode === 'page') return confirmBox('Clear the page design?', 'Remove the whole-page design and its picture?', 'Clear', async () => {
     const sl = ins.page; if (sl.hasImg) Sync.pictureChanged(sl.id, true); await imgDB.del(sl.id); delete imgEls[sl.id];
