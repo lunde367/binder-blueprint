@@ -211,7 +211,15 @@ main{display:flex;flex-direction:column;gap:14px}
 .mhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .mhead h2{flex:1}
 .mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));background:var(--bg);padding:10px 0 4px}
-.addtabs{margin-bottom:12px}
+.addtabs{margin-bottom:14px}
+.seg.addtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:none;padding:0;border-radius:0}
+.seg.addtabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;padding:8px 4px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:700 13px var(--body);line-height:1.15;text-align:center}
+.seg.addtabs button .ic{font-size:20px;line-height:1}
+.seg.addtabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.seg.addtabs button:not(.on):hover{border-color:var(--accent)}
+/* the add dialog keeps one height, so the tabs never move when you switch */
+.modal.addm{height:calc(100dvh - 24px);max-height:none}
+@media(min-width:700px){.modal.addm{height:min(860px,calc(100dvh - 48px))}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
 .setlist{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto}
 .setlist button{display:flex;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-weight:600}
@@ -303,6 +311,10 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .pk.title.has-design{padding:0;background-size:cover!important;background-position:center!important;color:transparent;text-shadow:none}
 .titlepage.has-design{background-size:cover!important;background-position:center!important}
 .titlepage.has-design > span{display:none}
+.titlepage.has-design{background:none!important;padding:0;box-shadow:none}
+.tp-split{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--c),1fr);grid-template-rows:repeat(var(--r),1fr);gap:3px;pointer-events:none}
+.tp-split i{border-radius:3px;background-repeat:no-repeat;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.gc .tp-split{gap:2px}
 .saved{display:flex;flex-direction:column;gap:6px;width:100%;max-width:520px;align-self:center}
 .saved h3{margin:0;font:700 13px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:8px}
 .saved h3 .pro{font-size:10px;letter-spacing:.08em;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,#FF6B6B,#FFD36B,#8CF5A8,#6BD8FF,#B48CFF);color:#15232B}
@@ -630,7 +642,7 @@ function pageHTML(b, L, map, s) {
   if (L.fullSides[s] !== undefined) {
     const it = b.items[L.fullSides[s]];
     const [gc, gr] = GRID[b.pockets];
-    inner = `<button class="pk titlepage${it.thumb ? ' has-design' : ''}" data-i="${L.fullSides[s]}" aria-label="${esc(it.text || 'Title page')}" style="background:${esc(it.color)}${it.thumb ? ` url('${it.thumb}')` : ''};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}"><i class="tp-grid" style="--c:${gc};--r:${gr}">${'<i></i>'.repeat(gc * gr)}</i><span>${esc(it.text || 'Title page')}</span></button>`;
+    inner = `<button class="pk titlepage${it.thumb ? ' has-design' : ''}" data-i="${L.fullSides[s]}" aria-label="${esc(it.text || 'Title page')}" style="background:${esc(it.color)};aspect-ratio:${gc * 63 + (gc - 1) * 3}/${gr * 88 + (gr - 1) * 3}">${it.thumb ? splitHTML(it.thumb, gc, gr) : `<i class="tp-grid" style="--c:${gc};--r:${gr}">${'<i></i>'.repeat(gc * gr)}</i>`}<span>${esc(it.text || 'Title page')}</span></button>`;
   } else {
     const row = map[s] || {};
     for (let k = 0; k < b.pockets; k++) inner += row[k] !== undefined ? pocketHTML(b, row[k], over) : `<div class="pk blank"></div>`;
@@ -871,7 +883,9 @@ function renderGuide() {
     let grid = '';
     if (L.fullSides[s] !== undefined) {
       const it = b.items[L.fullSides[s]];
-      grid = `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)}${it.thumb ? ` url('${it.thumb}') center/cover` : ''};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tp-grid" style="--c:${cols};--r:${rows}">${'<i></i>'.repeat(cols * rows)}</i><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>${cols * rows} title inserts, one per pocket</small></span></div></div>`;
+      grid = it.thumb
+        ? `<div class="ggrid" style="--cols:1"><div class="gc go" style="background:none;aspect-ratio:${cols * 63}/${rows * 88}">${splitHTML(it.thumb, cols, rows)}<i class="tick"></i><span class="cap">${esc(it.text || 'Title page')} · ${cols * rows} pieces, one per pocket</span></div></div>`
+        : `<div class="ggrid" style="--cols:1"><div class="gc go nopic" style="background:${esc(it.color)};aspect-ratio:${cols * 63}/${rows * 88}"><i class="tp-grid" style="--c:${cols};--r:${rows}">${'<i></i>'.repeat(cols * rows)}</i><i class="tick"></i><span class="cap light big">${esc(it.text || 'Title page')}<br><small>${cols * rows} title inserts, one per pocket</small></span></div></div>`;
     } else {
       const row = map[s] || {};
       for (let k = 0; k < b.pockets; k++) grid += row[k] !== undefined ? cell(row[k]) : `<div class="gc unused"></div>`;
@@ -965,14 +979,14 @@ function toast(msg, action) {
 function commit(msg) { save(); render(); if (msg) toast(msg); }
 
 /* ---------------- add dialog ---------------- */
-const ADD_TABS = [['set', 'Whole set'], ['range', 'Card range'], ['pick', 'Pick cards'], ['energy', 'Energy'], ['title', 'Title / divider'], ['empty', 'Empty pockets']];
+const ADD_TABS = [['set', 'Whole set', '📚'], ['range', 'Card range', '🔢'], ['pick', 'Pick cards', '👆'], ['energy', 'Energy', '⚡'], ['title', 'Title / divider', '🏷️'], ['empty', 'Empty pockets', '⬜']];
 const A = { tab: 'set', build: null };
 
 function openAdd(beforeSec) {
   const b = cur(), secs = sectionOrder(b);
   const m = openModal(`
     <div class="mhead"><h2>Add to your binder</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-    <div class="seg addtabs">${ADD_TABS.map(([k, l]) => `<button data-at="${k}" class="${k === A.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="seg addtabs" role="tablist">${ADD_TABS.map(([k, l, ic]) => `<button role="tab" data-at="${k}" class="${k === A.tab ? 'on' : ''}" aria-selected="${k === A.tab}"><span class="ic" aria-hidden="true">${ic}</span>${l}</button>`).join('')}</div>
     <div id="addBody"></div>
     <div class="where">
       <label>Put it <select class="inp" id="aPos">${secs.length ? '<option value="start">at the start</option>' : ''}<option value="end">at the end</option>${secs.map(s => `<option value="${s}" ${s === beforeSec ? 'selected' : ''}>before “${esc((b.sections[s] || {}).label || 'Cards')}”</option>`).join('')}</select></label>
@@ -981,7 +995,8 @@ function openAdd(beforeSec) {
     <div id="addPreview" class="preview">Pick something to add.</div>
     <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="addGo" disabled>Add to binder</button></div>`, true);
   A.posTouched = !!beforeSec;
-  $$('[data-at]', m).forEach(btn => btn.onclick = () => { A.tab = btn.dataset.at; $$('[data-at]', m).forEach(x => x.classList.toggle('on', x === btn)); showAddTab(); });
+  m.classList.add('addm');
+  $$('[data-at]', m).forEach(btn => btn.onclick = () => { A.tab = btn.dataset.at; $$('[data-at]', m).forEach(x => { x.classList.toggle('on', x === btn); x.setAttribute('aria-selected', x === btn); }); showAddTab(); });
   $('#aPos', m).onchange = () => { A.posTouched = true; refreshPreview(); };
   // Enter on the keyboard adds it (no need to close the keyboard to reach the button)
   m.addEventListener('keydown', e => {
@@ -1231,7 +1246,7 @@ function openItem(i) {
   $$('#dOwn button', m).forEach(btn => btn.onclick = () => { if (!!+btn.dataset.own !== !!it.own) toggleOwn(i); openItem(i); });
   $('#dText', m) && ($('#dText', m).oninput = e => { it.text = e.target.value; save(); render(); });
   $$('.swatches button', m).forEach(btn => btn.onclick = () => { it.color = btn.dataset.c; commit(); openItem(i); });
-  $$('#dSize button', m).forEach(btn => btn.onclick = () => { it.size = btn.dataset.s; commit(); openItem(i); });
+  $$('#dSize button', m).forEach(btn => btn.onclick = async () => { it.size = btn.dataset.s; await titleThumb(b, it); commit(); openItem(i); });
   const step = d => { const j = i + d; if (j < 0 || j >= b.items.length) return; confirmOrder(b, [b.items[i].sec, b.items[j].sec], () => { const k = moveItem(i, d); commit(); openItem(k); }); };
   $('#dPrev', m).onclick = () => step(-1);
   $('#dNext', m).onclick = () => step(1);
@@ -1927,8 +1942,8 @@ function proPitch(why) {
 }
 
 /* ---------- saved designs ---------- */
-function designThumb(sl, w = 150) {
-  const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * 1.4);
+function designThumb(sl, w = 150, cols = 1, rows = 1) {
+  const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * (rows * 7) / (cols * 5));
   return Promise.all([slotImage(sl), fontReady(sl)]).then(([img]) => { drawInsert(c.getContext('2d'), sl, c.width, c.height, img); return c.toDataURL('image/jpeg', 0.8); });
 }
 async function sheetThumb(slots) {
@@ -2033,11 +2048,29 @@ async function attachDesign(b, it, sl) {
   if (old?.hasImg) { Sync.pictureChanged(old.id, true); await imgDB.del(old.id); }
   if (!sl) { delete it.design; delete it.thumb; return; }
   const d = await snapshot(sl); delete d.grid;
-  it.design = d; it.thumb = await designThumb(d, 180);
+  it.design = d; await titleThumb(b, it); it.thumbV = 2;
   if (!it.text || it.text === 'Title') it.text = sl.text || it.text || 'Title';
   if (sl.bg) it.color = sl.bg;
 }
+async function titleThumb(b, it) {   // whole-page titles: bigger, and the same shape as the page
+  if (!it.design) return;
+  const [c, r] = GRID[b.pockets] || [3, 3];
+  it.thumb = it.size === 'page' ? await designThumb(it.design, 120 * c, c, r) : await designThumb(it.design, 180);
+}
+async function refreshTitleThumbs(b, all) {   // redo whole-page previews (older ones were small and card-shaped)
+  let n = 0;
+  for (const it of b.items) {
+    if (it.k !== 'title' || it.size !== 'page' || !it.design || (!all && it.thumbV === 2)) continue;
+    if (it.design.hasImg && !(await imgDB.get(it.design.id))) continue;   // picture not on this device yet
+    await titleThumb(b, it); it.thumbV = 2; n++;
+  }
+  return n;
+}
+setTimeout(async () => { let n = 0; for (const b of store.binders || []) n += await refreshTitleThumbs(b); if (n) { save(); render(); } }, 1500);
 const noDesignsNote = `<p class="small muted" style="margin:0">No designs yet. Make one in <b>Title & divider cards</b> (on My binders), then pick it here.</p>`;
+
+// a whole-page design, cut into its pockets (with the gaps between pockets) so you see it as it'll look sleeved
+const splitHTML = (thumb, c, r) => `<i class="tp-split" style="--c:${c};--r:${r}">${Array.from({ length: c * r }, (_, k) => { const x = k % c, y = Math.floor(k / c); return `<i style="background-image:url('${thumb}');background-size:${c * 100}% ${r * 100}%;background-position:${c > 1 ? x / (c - 1) * 100 : 0}% ${r > 1 ? y / (r - 1) * 100 : 0}%"></i>`; }).join('')}</i>`;
 
 /* ---------- random designs ---------- */
 const RANDOM_TITLES = ['My Collection', 'Rare Finds', 'Shiny Hunters', 'Holo Heaven', 'Trade Binder', 'Favorites', 'Full Arts', 'Secret Rares', 'Dream Team', 'Starter Squad',
@@ -2836,7 +2869,7 @@ $('#main').addEventListener('click', e => {
       b.items = b.items.filter(x => x.sec !== d.delsec); delete b.sections[d.delsec]; commit('Removed');
     });
   }
-  if (d.pockets) { const p = +d.pockets; if (p !== b.pockets) { b.pockets = p; commit(`Now a ${p}-pocket binder. Everything moved to fit.`); } return; }
+  if (d.pockets) { const p = +d.pockets; if (p !== b.pockets) { b.pockets = p; commit(`Now a ${p}-pocket binder. Everything moved to fit.`); refreshTitleThumbs(b, true).then(n => { if (n) { save(); render(); } }); } return; }
   if (d.pages) { b.pages = Math.max(1, Math.min(200, b.pages + +d.pages)); return commit(); }
   if (d.open) { store.cur = d.open; save(); return go('binder'); }
   if (d.dup) {
