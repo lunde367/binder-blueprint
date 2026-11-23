@@ -340,6 +340,7 @@ body.dragging .fab,body.dragging .zoomer{visibility:hidden}
 .sv .more{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:1;padding:0}
 .saved .hint{font-size:12px;color:var(--muted);margin:0}
 .ie-btns{display:flex;gap:8px;flex-wrap:wrap}
+.linkbtn{border:0;background:none;padding:6px;color:var(--muted);font:600 13px var(--body);text-decoration:underline;cursor:pointer}
 .opt{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500;opacity:.7;margin-left:4px}
 
 @media(max-width:600px){.ins-edit{grid-template-columns:1fr}.ins-edit .ins-canvas-wrap{position:sticky;top:-16px;z-index:3;background:var(--bg);padding:8px 0 10px;margin:-8px 0 0;flex-direction:row;align-items:flex-start;gap:12px;border-bottom:1px solid var(--line)}.ie-tools #ieHint{font-size:12px}.ins-edit .ins-canvas-wrap canvas{width:min(38vw,150px);flex:none}}
@@ -483,6 +484,7 @@ const plural = (n, w, p) => `${n} ${n === 1 ? w : (p || w + 's')}`;
 // true inside the Android / iPhone app (Capacitor), false on the website
 const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const APP_LINK = 'binderblueprint://auth';   // the email sign-in link opens the app here
+try { if (sessionStorage.getItem('binderBlueprint.deleted')) { sessionStorage.removeItem('binderBlueprint.deleted'); setTimeout(() => toast('Your account and everything in it were deleted.'), 400); } } catch (e) {}
 if (NATIVE) {
   const App = window.Capacitor.Plugins.App;
   App?.addListener('appUrlOpen', ({ url }) => { if (url && url.startsWith('binderblueprint://')) Sync.fromAppLink(url); });
@@ -2699,7 +2701,7 @@ const Sync = {
   schedule() { if (!this.user) return; clearTimeout(this.timer); this.setStatus('saving'); this.timer = setTimeout(() => this.push(), 1200); },
   flushAgain() { const a = this.again; this.again = false; if (a === 'pull') this.pull(); else if (a) this.push(); },
   async push() {
-    if (!this.user) return;
+    if (!this.user || this.deleting) return;
     if (this.busy) { this.again = this.again || 'push'; return; }
     if (!navigator.onLine) return this.setStatus('offline');
     this.busy = true;
@@ -2794,6 +2796,23 @@ const Sync = {
     const { error } = await this.sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
   },
+  async deleteAccount() {   // removes the account and everything in it, then clears this device
+    this.deleting = true; clearTimeout(this.timer); this.stop();
+    const sb = this.sb, uid = this.user.id, st = sb.storage.from('insert-images');
+    for (let k = 0; k < 50; k++) {   // pictures first: storage files can't be removed from the database side
+      const { data, error } = await st.list(uid, { limit: 100 });
+      if (error) throw error;
+      if (!data || !data.length) break;
+      const { error: e2 } = await st.remove(data.map(f => `${uid}/${f.name}`));
+      if (e2) throw e2;
+    }
+    const { error } = await sb.rpc('delete_my_account');
+    if (error) throw error;
+    await sb.auth.signOut({ scope: 'local' }).catch(() => {});
+    for (const s of insAll()) await imgDB.del(s.id);
+    try { [LS_KEY, INS_KEY, SYNC_KEY].forEach(k => localStorage.removeItem(k)); sessionStorage.setItem('binderBlueprint.deleted', '1'); } catch (e) {}
+    location.replace(location.pathname + '#home'); location.reload();
+  },
   async signOut() {
     clearTimeout(this.timer);
     if (navigator.onLine) await this.push();
@@ -2834,12 +2853,31 @@ function openAccount() {
       <p class="small muted" style="margin:0">Sign in with the same email on any phone, tablet or computer to see the same binders.</p>
     </div>
     ${familyBoxHTML()}
-    <div class="mfoot"><button class="btn danger" id="aOut">Sign out</button><button class="btn primary" data-close>Done</button></div>`);
+    <div class="mfoot"><button class="btn danger" id="aOut">Sign out</button><button class="btn primary" data-close>Done</button></div>
+    <p class="small" style="text-align:center;margin:8px 0 0"><button class="linkbtn" id="aDelete">Delete my account</button></p>`);
   wireFamily(m);
+  $('#aDelete', m).onclick = () => openDeleteAccount();
   $('#aOut', m).onclick = () => {
     const go = () => Sync.signOut();
     if (pend && !navigator.onLine) return confirmBox('Sign out while offline?', 'Some changes haven’t uploaded yet and will be lost from this device.', 'Sign out anyway', go);
     confirmBox('Sign out?', 'Your binders stay safe in your account. This device will be cleared until you sign in again.', 'Sign out', go);
+  };
+}
+function openDeleteAccount() {
+  const email = Sync.user?.email || '';
+  const m = openModal(`<div class="mhead"><h2>Delete your account?</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <p>This permanently deletes the account for <b>${esc(email)}</b> and everything saved in it:</p>
+    <ul class="small" style="margin:0 0 10px;padding-left:20px;line-height:1.6"><li>all your binders and their restore points</li><li>your title cards, saved designs and pictures</li><li>your family members</li></ul>
+    <p class="small muted">It can't be undone. It also signs you out and clears this device. Other phones or computers signed in to this account get signed out too, within about an hour.</p>
+    <label class="field"><span>Type DELETE to confirm</span><input class="inp" id="delWord" autocomplete="off" autocapitalize="characters" enterkeyhint="done"></label>
+    <div class="mfoot"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="delGo" disabled>Delete my account</button></div>`);
+  const inp = $('#delWord', m), go = $('#delGo', m);
+  inp.oninput = () => { go.disabled = inp.value.trim().toUpperCase() !== 'DELETE'; };
+  go.onclick = async () => {
+    if (!navigator.onLine) return toast('You need to be online to delete your account.');
+    go.disabled = true; go.textContent = 'Deleting…';
+    try { await Sync.deleteAccount(); }
+    catch (e) { Sync.deleting = false; go.disabled = false; go.textContent = 'Delete my account'; toast('Couldn\'t delete your account. Check your connection and try again.'); }
   };
 }
 function openSignIn() {
